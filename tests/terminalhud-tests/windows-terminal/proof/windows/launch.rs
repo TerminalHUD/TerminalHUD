@@ -1,9 +1,5 @@
-use super::{
-    Result, foreground::Monitor, managed::Managed, session::Session, setup::Setup,
-    underlay::Underlay,
-};
+use super::{Result, foreground::Monitor, session::Session, setup::Setup, underlay::Underlay};
 use hudswitch_core::VisibleState;
-use hudswitch_windows::LaunchedWindow;
 use std::{
     collections::HashSet,
     thread,
@@ -11,8 +7,12 @@ use std::{
 };
 use terminalhud_windows_terminal::{LaunchPlan, native};
 use windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
-
-pub(super) fn acquire(setup: &Setup, sink: &Underlay) -> Result<Managed> {
+pub(super) struct Launched {
+    pub window: native::VerifiedWindow,
+    pub session: Session,
+    pub foreground_changed: bool,
+}
+pub(super) fn verified(setup: &Setup, sink: &Underlay) -> Result<Launched> {
     if unsafe { GetForegroundWindow() } != sink.hwnd() {
         return Err(
             "owned sink is not foreground; refusing launch instead of bypassing focus policy"
@@ -33,6 +33,7 @@ pub(super) fn acquire(setup: &Setup, sink: &Underlay) -> Result<Managed> {
         intent: VisibleState::Passive,
         primary_origin: (0, 0),
     };
+    println!("CREATE_INTENT Passive STARTF_USESHOWWINDOW SW_SHOWNOACTIVATE(4)");
     let mut session = Session::new(
         setup,
         native::start_with_command(&plan, &setup.terminal, &setup.task, &setup.command)?,
@@ -64,16 +65,27 @@ pub(super) fn acquire(setup: &Setup, sink: &Underlay) -> Result<Managed> {
         final_foreground as isize,
         foreground_events.contains(&hwnd)
     );
-    if foreground_events.contains(&hwnd) || final_foreground != sink.hwnd() {
-        return Err("Passive creation changed foreground (including transient events); no backend acquisition performed".into());
-    }
-    println!(
-        "PASS: monitored Passive creation preserved owned foreground, {} foreground notifications observed",
-        foreground_events.len()
-    );
-    let (hwnd, process) = verified.into_parts();
-    // Correlated nonce/profile/session + live retained ancestry, exact fresh
-    // window/executable and task-owned portable path prove this launched target.
-    let receipt = unsafe { LaunchedWindow::from_verified_launch(hwnd as _, process) }?;
-    Managed::new(receipt, hwnd, session)
+    let changed = foreground_events.contains(&hwnd) || final_foreground != sink.hwnd();
+    let classified: Vec<_> = foreground_events
+        .iter()
+        .map(|event| {
+            format!(
+                "{}:{}",
+                event,
+                if *event == hwnd {
+                    "own-target"
+                } else if *event == sink.hwnd() as isize {
+                    "own-sink"
+                } else {
+                    "other"
+                }
+            )
+        })
+        .collect();
+    println!("CLASSIFIED_FOREGROUND_EVENTS {classified:?}");
+    Ok(Launched {
+        window: verified,
+        session,
+        foreground_changed: changed,
+    })
 }
