@@ -1,0 +1,17 @@
+[package]
+name = "terminalhud-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+terminalhud-core.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+hudswitch-windows.workspace = true
+terminalhud-windows-terminal.workspace = true

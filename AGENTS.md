@@ -12,8 +12,9 @@ Keep HudSwitch core independent of terminal, UI, and OS-specific code. The MVP
 uses Rust, Windows 11, and a dedicated Windows Terminal process; other platforms
 and an embedded terminal remain future work.
 
-Run `python3 scripts/check_repository.py` and `git diff --check` before handoff.
-There is no Cargo workspace yet; add build, lint, and test checks when one exists.
+Run the checks in `ratpack.json` before handoff. See [building](docs/building.md)
+for the workspace map, portable checks, and native Windows build/test path.
+Windows behavior requires native Windows evidence; WSL-only tests are insufficient.
 The persistent coordinator handles coordination only; workflow support owns setup
 changes, and implementation staffing is agreed when product work is ready.
 Read current setup decisions and handoffs in Linear, not repository status notes.

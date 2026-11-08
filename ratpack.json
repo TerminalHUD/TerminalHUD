@@ -1,10 +1,14 @@
 {
   "schema_version": 1,
   "integration_owner": "crd-rat (TerminalHUD coordinator conversation)",
-  "max_implementation_agents": null,
+  "max_implementation_agents": 1,
   "custom_roles": {},
   "checks": [
     "python3 scripts/check_repository.py",
+    "python3 scripts/check_workspace.py",
+    "cargo fmt --all -- --check",
+    "cargo clippy --workspace --all-targets --locked -- -D warnings",
+    "cargo test --workspace --locked",
     "git diff --check"
   ],
   "github_repository": "TerminalHUD/TerminalHUD",
