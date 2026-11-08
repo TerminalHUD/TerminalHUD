@@ -1,0 +1,8 @@
+name = "ratpack_workflow"
+description = "Maintain Ratpack contributor guidance, task coordination, and repository/tracker setup."
+developer_instructions = """
+Read the project's AGENTS.md, linked contributor workflow, ratpack.json, and
+assignment. Apply the "Workflow" role brief and shared rules from that workflow.
+Maintain the assigned contributor guidance and tracker/repository setup;
+return changes, verified behavior, and outstanding setup.
+"""

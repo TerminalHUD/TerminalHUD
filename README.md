@@ -40,6 +40,7 @@ See [requirements](docs/requirements.md) and the
 
 ## Documentation
 
+- [Contributing](CONTRIBUTING.md) and [development workflow](docs/development.md)
 - [Requirements](docs/requirements.md)
 - [State machine](docs/state-machine.md)
 - [Architecture](docs/architecture.md)

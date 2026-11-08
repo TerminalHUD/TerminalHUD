@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "integration_owner": "crd-rat (TerminalHUD coordinator conversation)",
+  "max_implementation_agents": null,
+  "custom_roles": {},
+  "checks": [
+    "python3 scripts/check_repository.py",
+    "git diff --check"
+  ],
+  "github_repository": "TerminalHUD/TerminalHUD",
+  "linear_team": "TER",
+  "linear_project": "https://linear.app/terminalhud/project/terminalhud-windows-mvp-b25fa1b76f71"
+}
