@@ -14,7 +14,7 @@ git diff --check
 Python 3.11 or later is required for the repository check. It validates the
 Ratpack configuration, role profile syntax, and local Markdown link targets.
 The `check` GitHub Actions job runs these checks for pull requests and pushes to
-`main` and `devel`. Its first successful remote run remains to be verified.
+`main` and `devel`. Record validation evidence in the linked Linear task.
 
 Rust formatting, Clippy, Cargo tests, and Windows integration checks must be
 added with the first implementation. Product acceptance is defined by the

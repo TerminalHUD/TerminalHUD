@@ -19,13 +19,10 @@ def main():
         if config.get("schema_version") != 1:
             errors.append("ratpack.json: expected schema_version 1")
         count = config.get("max_implementation_agents")
-        allowed = config.get("implementation_delegation_authorized")
-        if type(allowed) is not bool:
-            errors.append("ratpack.json: delegation must be a boolean")
-        if count is not None and (type(count) is not int or count < 1):
-            errors.append("ratpack.json: worker count must be positive or null")
-        if allowed and count is None:
-            errors.append("ratpack.json: delegation requires an approved worker count")
+        if "max_implementation_agents" not in config:
+            errors.append("ratpack.json: missing implementation worker count")
+        elif count is not None and (type(count) is not int or count < 0):
+            errors.append("ratpack.json: worker count must be nonnegative or null")
         names = set()
         for role in ("coordinator", "implementor", "reviewer", "cleanup", "workflow"):
             path = ROOT / ".codex" / "agents" / f"ratpack_{role}.toml"

@@ -2,7 +2,6 @@
   "schema_version": 1,
   "integration_owner": "crd-rat (TerminalHUD coordinator conversation)",
   "max_implementation_agents": null,
-  "implementation_delegation_authorized": false,
   "custom_roles": {},
   "checks": [
     "python3 scripts/check_repository.py",

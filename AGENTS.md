@@ -14,4 +14,6 @@ and an embedded terminal remain future work.
 
 Run `python3 scripts/check_repository.py` and `git diff --check` before handoff.
 There is no Cargo workspace yet; add build, lint, and test checks when one exists.
-See the adoption section in `docs/development.md` for pending setup decisions.
+The persistent coordinator handles coordination only; workflow support owns setup
+changes, and implementation staffing is agreed when product work is ready.
+Read current setup decisions and handoffs in Linear, not repository status notes.

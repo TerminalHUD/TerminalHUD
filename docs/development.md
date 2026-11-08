@@ -15,10 +15,11 @@ workflow and explicit user decisions; upstream changes require deliberate adopti
 | Cleanup | `cln-rat` | Audit a bounded area for maintainability problems; report findings or implement scoped fixes |
 | Workflow | `wfl-rat` | Maintain contributor guidance and tracker/repository setup; report changes, verified behavior, and setup gaps |
 
-The coordinator is the persistent project conversation by default. It delegates
-substantial implementation when authorized and supported, and may implement
-bounded work itself. Cleanup and workflow are optional support, not permanent
-staffing requirements. Every assignment names the outcome, acceptance criteria,
+The coordinator is the persistent project conversation by default. Adopting
+Ratpack authorizes it to create and manage task-scoped helpers, including
+independent reviewers, where the host supports them. It delegates substantial
+implementation and may implement bounded work itself. Cleanup and workflow are
+optional support, not permanent staffing requirements. Every assignment names the outcome, acceptance criteria,
 owned paths, dependencies/contracts, checks, and handoff destination.
 
 Only the integration owner recorded in `ratpack.json` merges PRs, one at a time.
@@ -36,18 +37,25 @@ spawning; additional spawning authority must be explicitly delegated.
 
 ### Staffing and contributors
 
-There is no fixed worker count. The coordinator proposes a useful concurrent
-implementation count and task split; the human approves or chooses another.
-Record the approved count in `max_implementation_agents` and spawning permission
-in `implementation_delegation_authorized`. A null count is unapproved, not
-unlimited. Spawning implementors requires permission and a positive approved
-count. Reuse approval until changed; request an increase when useful and wait
-for an answer before exceeding existing authorization.
+There is no separate delegation enable/disable step. At bootstrap, leave
+`max_implementation_agents` null unless the human already chose a count. When
+implementation is ready to start, the coordinator proposes a useful concurrent
+implementor count and concrete task split; the human approves or chooses another.
+Record that count in `max_implementation_agents`. Null means the count has not
+been chosen; zero records an explicit choice to work without implementation
+helpers. Do not dispatch implementors before a positive count is approved.
+Reuse approval until changed; suggest an increase when growing implementation
+work justifies it, and wait before exceeding the approved count.
 
 Use fewer workers for overlapping tasks and respect actual host capacity.
 Human-created implementation peers and cleanup/custom roles that edit repository
-content consume the same worker capacity. Review/support spawning requires its
-own agreed scope; the implementation limit does not authorize unlimited support.
+content consume the same worker capacity. Independent review and other support
+helpers are part of the adopted workflow, scoped to actual tasks and host
+capacity; they do not require a separate enablement question. Honor explicit
+human restrictions on helpers and preserve existing staffing decisions during
+adoption upgrades. The retired `implementation_delegation_authorized` field is
+not used by this workflow; reconcile it against the human's actual instructions
+before removing it from an older project's configuration.
 
 The human may create a separate conversation for any role. Register its actual
 owner and handoff route, have it read the project instructions and role brief,
@@ -209,73 +217,41 @@ owner verifies evidence, merges the release PR, and tags its `main` commit.
 Merge `main` back into `devel` after release. Track release completion separately
 from implementation; temporary release branches may stabilize a release.
 
-Protect both branches with required PR review and CI where available; prohibit
-direct/force pushes. Disclose unavailable protections and apply the checklist
-manually; visibility/billing changes need user approval. A branch is not proof
+Protect both branches with PRs and CI where available; prohibit direct/force
+pushes. The default is independent agent review followed by the integration
+owner's merge after passing CI, with zero required GitHub approving reviews.
+Do not ask the human to sign in with a second GitHub account to approve agents'
+PRs. Require GitHub approvals only when the human requests them or existing
+repository policy requires them; an approving account must differ from the PR
+author's. Preserve existing protections;
+relaxing them requires explicit human approval. Disclose unavailable protections
+and apply the checklist manually; visibility/billing changes need user approval. A branch is not proof
 of deployment or product readiness.
 
 For a new repository, a reviewed baseline may initialize `main` and `devel` at
 the same commit. Existing repositories need a reviewed migration preserving
 history and occupied work; never relabel arbitrary code as a released version.
 
-## TerminalHUD adoption
+## TerminalHUD project rules
 
-Adopted from `ratpack-workflow/ratpack` revision
-`86a12eb12bc1fcd5b4bb3e722056c21a4f226aac` using the installed `rp-bootstrap`
-skill. The installed skill, templates, workflow, and helper scripts were checked
-against the upstream Git blob hashes at that revision. The lock records the
-helper's generated baseline with supplied provenance; project customization is
-intentional and must be preserved during upgrades.
+The persistent coordinator conversation is `crd-rat`, the integration owner
+recorded in `ratpack.json`. The user assigned it to coordination only. It plans,
+assigns helpers, collects independent review, and integrates accepted changes;
+it does not take implementation assignments. Workflow support performs setup
+changes. Propose implementation staffing when concrete product work is ready.
 
-The product requirements and architecture decisions remain authoritative.
-Implementation has not started. Repository checks cover contributor
-configuration, the five native role profile files, local Markdown targets, and
-whitespace. Add Cargo and Windows validation with implementation.
+Use team `TER` and the Windows MVP project linked in `ratpack.json`. The team's
+`Todo` status maps to Ratpack Ready. Reuse the existing Bug, Feature,
+Improvement, and Documentation labels. Keep current task ownership, setup
+status, validation evidence, and handoffs in Linear rather than repository docs.
 
-### Project setup and bootstrap handoff
+Initial adoption may use a reviewed bootstrap PR into `main` before remote
+`devel` exists. After the accepted bootstrap merge, initialize `devel` at that
+reviewed commit and select it as the protected default branch. This migration
+preserves history and is not a product release. Subsequent task PRs target
+`devel` under the normal workflow.
 
-- Tracker: team `Terminalhud` (`TER`) through `linear_terminalhud`; project
-  [TerminalHUD Windows MVP](https://linear.app/terminalhud/project/terminalhud-windows-mvp-b25fa1b76f71).
-  [TER-5](https://linear.app/terminalhud/issue/TER-5/adopt-ratpack-contributor-workflow-and-repository-setup)
-  owns adoption evidence, review, and the next action. Task state belongs there.
-- The user assigned this conversation as coordinator and implementor. Integration
-  owner is `crd-rat (TerminalHUD coordinator conversation)` in `ratpack.json`,
-  following the coordinator's normal integration responsibility. The user retains
-  product and release authority. Direct implementation by this coordinator is
-  allowed; implementation delegation remains disabled with an unapproved
-  (`null`) worker count. Additional review/support agents require authorization.
-- The team's `Todo` state maps to Ratpack Ready. Backlog, In Progress, In Review,
-  Done, and Canceled already exist, along with Bug, Feature, Improvement, and
-  Documentation labels. Reuse them rather than creating duplicate conventions.
-- Bootstrap branch: `chore/TER-5-bootstrap-ratpack`, based on documentation commit
-  `00697b09e4ae0b885f31ab7c9fc610d79a5aa566`. Local `devel` points to that
-  baseline. As a one-time adoption exception, the bootstrap PR targets `main` so
-  the migration can receive independent review before changing the remote branch
-  structure. This bootstrap merge is not a product release.
-- After accepted review and a successful bootstrap merge, the integration owner
-  creates remote `devel` at the reviewed `main` commit, sets it as default, and
-  protects it. Normal subsequent PRs target `devel`. Preserve existing history;
-  no released version or product readiness is implied.
-- GitHub policy is squash merges for task PRs and merge commits for releases;
-  disable rebase merges. Require one approving review and the `check` CI job on
-  `main` and `devel`, with direct/force pushes and deletion prohibited. Record
-  applied settings and read-back evidence in TER-5. Any unavailable protection
-  remains explicit and requires the manual integration checklist.
-- The `check` GitHub Actions job validates contributor configuration, profiles,
-  local Markdown targets, and whitespace. Local checks and the installed
-  `rp-bootstrap` doctor must pass before publishing. A successful remote run
-  must be observed on the linked PR; local results alone do not establish CI.
-- The user connected GitHub and Linear. That establishes an integration, but its
-  draft/ready/merged status transitions have not yet been verified. Use manual
-  evidence-backed tracker updates until automation targeting `devel` is proven
-  against a real linked PR. A ready bootstrap PR alone cannot verify merge or
-  `devel` automation.
-- All five `.codex/agents/` profile files parse, and the reloaded host advertises
-  their native role names. This verifies discovery; successful spawning remains
-  untested. No workers have been spawned and no global trust, model, permissions,
-  or account settings were changed.
-
-Next handoff: a different human or authorized reviewer reviews the exact
-bootstrap PR revision. The integration owner verifies review, GitHub approval,
-and CI before merging and completing the remote `devel` migration. The task
-stays In Review until accepted merge; product work is outside this handoff.
+This workflow was deliberately adopted from `ratpack-workflow/ratpack` revision
+`529a7dcb6239e216377164df2bc430a40cd288fb`. The lock records the upstream
+starter baseline, including the recorded integration owner; project-specific
+customizations remain intentional differences for future upgrade reconciliation.
