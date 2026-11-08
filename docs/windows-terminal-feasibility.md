@@ -70,3 +70,43 @@ These are fixture/readiness hypotheses, not measured causes of the zero count.
 A separately reviewed correction will use explicit RGB white, early foreground
 glyph blocks and a correlated output-flushed marker; acceptance thresholds and
 background sample remain unchanged. Flush is not a GPU paint guarantee.
+
+
+## Corrected fixture and foreground-restoration result
+
+The [second Active trace](../tests/terminalhud-tests/windows-terminal/evidence/active-run2.txt)
+used independently reviewed revision `8c5cbc2c0ebdb313aeb95d9ccb5e4f9dba92e920`,
+fixture SHA256 `9a264438b3360ed7daee480f6b58a66dcbf636bf4167f3e669a395fc9bf0b79e`
+and the unchanged original synthetic settings. Explicit RGB white foreground
+blocks near the origin and exact output-flushed/session correlation corrected
+fixture ambiguity without lowering the pixel predicate or expanding its region.
+
+Normal Active creation verified owner PID 21532/HWND 18026326, fixture PID 36104
+and session `{cd73e5d4-f1a5-42af-b0ee-e5bd0ef4168a}`. Native Active focus,
+fullscreen/topmost and output-flushed correlation passed. On the 2560×1600
+display, the unchanged 512×512/step8 scan found 1,562 near-white samples, including
+actual RGB (255,255,255) at (168,8). Background RGB (26,104,143) exactly matched
+the 35% expectation. This positively measures Active fixture text/background
+composition; it does not establish every glyph or other renderer configuration.
+
+The next RequestPassive returned a saved-focus warning `FocusRefused`, which the
+strict proof wrapper treated as failure. Source maps that variant specifically
+to `SetForegroundWindow(saved_hwnd)` returning zero, after saved PID/thread,
+retained process lifetime and visible/enabled checks passed. A failed identity
+check would report `InvalidTarget`; a later observed-foreground mismatch would
+report `Timeout`. Exact foreground/class/PID/thread at that call were not logged,
+so those numeric details cannot be reconstructed after cleanup. The controller's
+warning path completes its own Passive observation, but the independent sink,
+Passive renderer, click, Hidden/session-loop and successful-quit assertion phases
+were not reached. No physical input occurred.
+
+This transition was called programmatically after launch and pixel observation,
+without a fresh hotkey/menu/foreground CLI action. It is not evidence that a
+legitimate user-triggered request has the same foreground eligibility. The backend
+reported the refusal and released owned target focus through its existing safe
+path; no grant, synthetic input or focus bypass was attempted. Error cleanup
+attempted controller Quit, closed only the nonce fixture/target and destroyed
+the sink. No owned process remained; the existing-Terminal witness and external
+configuration/fragment hashes stayed unchanged. Exact output marker, state,
+settings, logs and binaries are preserved separately. Focus restoration and the
+unreached acceptance phases remain unproven.

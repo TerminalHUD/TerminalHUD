@@ -1,0 +1,21 @@
+PHASE sink-foreground-request sink=28577132 before=28577132
+PHASE sink-foreground-result api_return=true observed=28577132
+PHASE sink-foreground-ready sink=28577132
+ACTIVE_BEFORE_LAUNCH foreground=28577132 owned_sink=28577132
+ACTIVE_IDENTITY launcher=21532 owner=21532 hwnd=18026326 shell=36104 session={cd73e5d4-f1a5-42af-b0ee-e5bd0ef4168a}
+ACTIVE_COMMAND InteractionToggle confirmed Status { availability: Managed, state: Some(Active), target_id: Some(TargetId(1)) }
+ACTIVE_STATE Active native confirmed; shell=36104 session={cd73e5d4-f1a5-42af-b0ee-e5bd0ef4168a}
+ACTIVE_OUTPUT_FLUSHED {"block":{"column":2,"columns":24,"row":2,"rows":4},"foregroundRgb":[255,255,255],"nonce":"{936bea5c-1738-4f1a-8d49-854b8efb63ff}","phase":"output-flushed","profile":"{6d9ec4ff-aaa1-4b43-98f1-35ee8b0c488c}","session":"{cd73e5d4-f1a5-42af-b0ee-e5bd0ef4168a}","shellPid":36104}; emitted bytes only, not GPU readiness
+ACTIVE_RENDER_BOUNDS display=(0,0,2560,1600) fixture=foreground-white rows2-5 cols2-25; scan step8 top512 unchanged
+ACTIVE_RENDER passive=false expected=[26, 104, 143] tolerance=6 background=[26, 104, 143] opaque_white_samples=1562 brightest_rgb=[255, 255, 255] brightest_point=(168, 8) scan_bounds=(0, 0, 512, 512)
+ACTIVE_CLEANUP exact nonce fixture exited and target closed
+PHASE sink-cleanup: owned window destroyed
+PASS: 1 preexisting Terminal window style/visibility witnesses unchanged
+
+ACTIVE_PROOF_FAILED foreground restore warning: FocusRefused
+Terminal proof: foreground restore warning: FocusRefused
+
+PROOF_EXIT=1 TIMED_OUT=False
+OWNED_REMAINING=0
+RUNNER_EXIT=0
+EXTERNAL_HASH_BASELINES_UNCHANGED
