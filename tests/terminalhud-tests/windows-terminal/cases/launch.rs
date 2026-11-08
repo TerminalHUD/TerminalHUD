@@ -20,3 +20,32 @@ fn launch_arguments_are_isolated_fullscreen_and_do_not_use_mru_window() {
     assert!(arguments.contains(&"--suppressApplicationTitle".into()));
     assert!(!arguments.contains(&"last".into()));
 }
+
+#[cfg(windows)]
+#[test]
+fn explicit_command_rejects_extra_terminal_commands_before_process_creation() {
+    use terminalhud_windows_terminal::native::{NativeError, start_with_command};
+    let plan = LaunchPlan {
+        identity: LaunchIdentity {
+            nonce: guid(5),
+            profile: guid(4),
+        },
+        intent: VisibleState::Passive,
+        primary_origin: (0, 0),
+    };
+    let executable = std::env::current_exe().unwrap();
+    let cwd = executable.parent().unwrap();
+    assert!(matches!(
+        start_with_command(&plan, &executable, cwd, &[]),
+        Err(NativeError::Invalid(_))
+    ));
+    assert!(matches!(
+        start_with_command(
+            &plan,
+            &executable,
+            cwd,
+            &["fixture.exe".into(), "; new-tab ordinary-shell.exe".into()]
+        ),
+        Err(NativeError::Invalid(_))
+    ));
+}

@@ -63,3 +63,33 @@ fn dynamic_source_does_not_inherit_a_resolved_command_from_defaults() {
         Err(Error::UnresolvedSource)
     ));
 }
+
+#[test]
+fn invalid_profile_default_command_never_becomes_a_launchable_shell() {
+    let settings = json!({"profiles":{"defaults":{"commandline":"unrelated.exe","source":"unrelated.source"},"list":[{
+        "guid":guid(1).as_str(),"name":"No explicit command"
+    }]}});
+    let catalog = Catalog::parse(&settings.to_string()).unwrap();
+    assert!(matches!(
+        catalog.preview(&guid(1), guid(2), 35),
+        Err(Error::UnresolvedSource)
+    ));
+}
+
+#[test]
+fn profile_defaults_never_invent_profile_identity_but_keep_valid_defaults() {
+    let settings = json!({"profiles":{"defaults":{
+        "guid":guid(9).as_str(),"name":"Invented","source":"unrelated.source","commandline":"unrelated.exe",
+        "font":{"face":"Consolas","size":18},"startingDirectory":"C:\\fixture"
+    },"list":[{}, {"guid":guid(1).as_str(),"name":"Explicit","commandline":"fixture.exe"}]}});
+    let catalog = Catalog::parse(&settings.to_string()).unwrap();
+    assert_eq!(catalog.unresolved_entries, 1);
+    assert_eq!(catalog.profiles.len(), 1);
+    let preview = catalog.preview(&guid(1), guid(2), 35).unwrap();
+    let profile = &preview.json()["profiles"][0];
+    assert_eq!(profile["name"], "HUD — Explicit");
+    assert_eq!(profile["commandline"], "fixture.exe");
+    assert_eq!(profile["startingDirectory"], "C:\\fixture");
+    assert_eq!(profile["font"], json!({"face":"Consolas","size":18}));
+    assert!(profile.get("source").is_none());
+}

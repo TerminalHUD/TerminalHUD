@@ -47,3 +47,25 @@ fn correlation_requires_nonce_profile_new_window_and_verified_owner_ancestry() {
     wrong.nonce = guid(7);
     assert!(correlate(&identity, &wrong, &[30, 20], &[]).is_err());
 }
+
+#[test]
+fn a_valid_handshake_cannot_authorize_an_ancestry_from_another_shell() {
+    let identity = LaunchIdentity {
+        nonce: guid(5),
+        profile: guid(4),
+    };
+    let proof = SessionProof {
+        nonce: guid(5),
+        profile: guid(4),
+        session: guid(6),
+        shell_pid: 30,
+    };
+    let candidate = WindowCandidate {
+        handle: 11,
+        process_id: 20,
+        class: "CASCADIA_HOSTING_WINDOW_CLASS".into(),
+        title: identity.title(),
+        existed_before_launch: false,
+    };
+    assert!(correlate(&identity, &proof, &[20], &[candidate]).is_err());
+}

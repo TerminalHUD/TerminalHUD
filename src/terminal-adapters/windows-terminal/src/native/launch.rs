@@ -1,45 +1,12 @@
+use super::command::{arguments, wide};
 use super::{NativeError, error::last};
 use crate::LaunchPlan;
 use hudswitch_core::VisibleState;
-use std::os::windows::{
-    ffi::OsStrExt,
-    io::{FromRawHandle, OwnedHandle},
-};
+use std::os::windows::io::{FromRawHandle, OwnedHandle};
 use std::path::Path;
 use std::ptr::null;
 use windows_sys::Win32::System::Threading::*;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
-fn wide(value: &std::ffi::OsStr) -> Result<Vec<u16>, NativeError> {
-    let mut value: Vec<_> = value.encode_wide().collect();
-    if value.contains(&0) {
-        return Err(NativeError::Invalid("NUL in native path/argument"));
-    }
-    value.push(0);
-    Ok(value)
-}
-
-/// Standard Windows argv quoting; this does not invoke a command shell.
-fn quote(value: &str) -> String {
-    let mut output = String::from("\"");
-    let mut slashes = 0;
-    for character in value.chars() {
-        if character == '\\' {
-            slashes += 1;
-            continue;
-        }
-        if character == '"' {
-            output.extend(std::iter::repeat_n('\\', slashes * 2 + 1));
-        } else {
-            output.extend(std::iter::repeat_n('\\', slashes));
-        }
-        output.push(character);
-        slashes = 0;
-    }
-    output.extend(std::iter::repeat_n('\\', slashes * 2));
-    output.push('"');
-    output
-}
-
 pub struct LauncherProcess {
     pub pid: u32,
     _process: OwnedHandle,
@@ -49,14 +16,40 @@ pub struct LauncherProcess {
 /// in STARTUPINFO before process creation and survives supported Terminal handoff.
 /// The returned launcher PID is not a Terminal-window ownership proof.
 ///
-/// Precondition: the caller has independently verified that Terminal's runtime
-/// catalog contains this profile. A file on disk is insufficient: an unknown
-/// GUID may fall back to an ordinary profile, including its elevation/connection
-/// settings. The unfinished proof deliberately does not call this operation.
+/// Precondition: independently verify the runtime profile, or establish a fresh
+/// isolated configuration whose profile AND fallback command/connection/elevation
+/// are safe. A fragment file on disk alone is insufficient: an unknown GUID may
+/// fall back to an ordinary profile with unsafe launch behavior. The test probe
+/// uses the controlled portable precondition, not a runtime-recognition claim.
 pub fn start(
     plan: &LaunchPlan,
     executable: &Path,
     working_directory: &Path,
+) -> Result<LauncherProcess, NativeError> {
+    create(plan, executable, working_directory, &[])
+}
+
+/// Supply an explicit replacement command for a controlled launch. This does
+/// not by itself neutralize inherited elevation/connection behavior: the caller
+/// must still establish the profile/default-settings precondition of `start`.
+/// Terminal command separators are rejected instead of opening extra sessions.
+pub fn start_with_command(
+    plan: &LaunchPlan,
+    executable: &Path,
+    working_directory: &Path,
+    command: &[String],
+) -> Result<LauncherProcess, NativeError> {
+    if command.first().is_none_or(|argument| argument.is_empty()) {
+        return Err(NativeError::Invalid("explicit launch command is required"));
+    }
+    create(plan, executable, working_directory, command)
+}
+
+fn create(
+    plan: &LaunchPlan,
+    executable: &Path,
+    working_directory: &Path,
+    command: &[String],
 ) -> Result<LauncherProcess, NativeError> {
     if !executable.is_absolute() || !executable.is_file() {
         return Err(NativeError::Invalid(
@@ -65,15 +58,7 @@ pub fn start(
     }
     let application = wide(executable.as_os_str())?;
     let cwd = wide(working_directory.as_os_str())?;
-    let arguments = std::iter::once(executable.to_string_lossy().into_owned())
-        .chain(plan.arguments())
-        .map(|argument| quote(&argument))
-        .collect::<Vec<_>>()
-        .join(" ");
-    let mut command = wide(std::ffi::OsStr::new(&arguments))?;
-    if command.len() > 32767 {
-        return Err(NativeError::Invalid("command line too long"));
-    }
+    let mut command = arguments(plan, executable, command)?;
     let startup = STARTUPINFOW {
         cb: std::mem::size_of::<STARTUPINFOW>() as u32,
         dwFlags: STARTF_USESHOWWINDOW,

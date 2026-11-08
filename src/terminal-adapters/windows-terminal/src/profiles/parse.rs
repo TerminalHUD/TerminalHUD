@@ -30,11 +30,15 @@ impl Catalog {
         let container = root
             .get("profiles")
             .ok_or(Error::Invalid("profiles are missing"))?;
-        let defaults = container
+        let mut defaults = container
             .get("defaults")
             .and_then(Value::as_object)
             .cloned()
             .unwrap_or_default();
+        // Terminal's pinned loader clears these invalid profile-default keys.
+        for key in ["guid", "name", "source", "commandline"] {
+            defaults.remove(key);
+        }
         let list = container
             .as_array()
             .or_else(|| container.get("list").and_then(Value::as_array))
@@ -67,21 +71,11 @@ impl Catalog {
                 .get("commandline")
                 .and_then(Value::as_str)
                 .is_some_and(|value| !value.trim().is_empty());
-            let dynamic = profile
-                .get("source")
-                .and_then(Value::as_str)
-                .is_some_and(|value| !value.is_empty());
-            let resolved_commandline = explicit_command
-                || (!dynamic
-                    && effective
-                        .get("commandline")
-                        .and_then(Value::as_str)
-                        .is_some_and(|value| !value.trim().is_empty()));
             profiles.push(Profile {
                 guid,
                 name,
                 effective,
-                resolved_commandline,
+                resolved_commandline: explicit_command,
             });
         }
         Ok(Self {

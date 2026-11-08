@@ -1,4 +1,4 @@
-use super::{NativeError, ProcessIdentity, ancestry, windows};
+use super::{NativeError, ProcessIdentity, windows};
 use crate::{LaunchIdentity, SessionProof, correlate};
 use std::collections::HashSet;
 use std::os::windows::io::OwnedHandle;
@@ -30,7 +30,17 @@ pub fn verify(
     for candidate in &mut candidates {
         candidate.existed_before_launch = before.contains(&candidate.handle);
     }
-    let mut chain = ancestry(proof.shell_pid)?;
+    let mut possible = candidates
+        .iter()
+        .filter(|candidate| candidate.matches(identity));
+    let expected = possible
+        .next()
+        .ok_or(NativeError::Correlation(crate::Error::NoMatchingWindow))?;
+    if possible.next().is_some() {
+        return Err(NativeError::Invalid("ambiguous Terminal launch identity"));
+    }
+    let mut chain =
+        super::ancestry::to_terminal(proof.shell_pid, expected.process_id, terminal_executable)?;
     let ids: Vec<_> = chain.iter().map(|entry| entry.pid).collect();
     let candidate =
         correlate(identity, proof, &ids, &candidates).map_err(NativeError::Correlation)?;

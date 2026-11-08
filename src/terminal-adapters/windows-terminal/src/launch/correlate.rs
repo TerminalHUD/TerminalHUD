@@ -25,18 +25,27 @@ pub fn correlate<'a>(
     ancestors: &[u32],
     candidates: &'a [WindowCandidate],
 ) -> Result<&'a WindowCandidate, Error> {
-    if proof.nonce != identity.nonce || proof.profile != identity.profile || proof.shell_pid == 0 {
+    if proof.nonce != identity.nonce
+        || proof.profile != identity.profile
+        || proof.shell_pid == 0
+        || ancestors.first() != Some(&proof.shell_pid)
+    {
         return Err(Error::Invalid("session handshake does not match launch"));
     }
     let mut matches = candidates.iter().filter(|candidate| {
-        !candidate.existed_before_launch
-            && candidate.class == "CASCADIA_HOSTING_WINDOW_CLASS"
-            && candidate.title == identity.title()
-            && ancestors.contains(&candidate.process_id)
+        candidate.matches(identity) && ancestors.contains(&candidate.process_id)
     });
     let candidate = matches.next().ok_or(Error::NoMatchingWindow)?;
     if matches.next().is_some() {
         return Err(Error::Invalid("ambiguous Terminal launch identity"));
     }
     Ok(candidate)
+}
+
+impl WindowCandidate {
+    pub(crate) fn matches(&self, identity: &LaunchIdentity) -> bool {
+        !self.existed_before_launch
+            && self.class == "CASCADIA_HOSTING_WINDOW_CLASS"
+            && self.title == identity.title()
+    }
 }
