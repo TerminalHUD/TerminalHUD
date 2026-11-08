@@ -1,0 +1,18 @@
+PHASE sink-foreground-request sink=17239894 before=17239894
+PHASE sink-foreground-result api_return=true observed=17239894
+PHASE sink-foreground-ready sink=17239894
+ACTIVE_BEFORE_LAUNCH foreground=17239894 owned_sink=17239894
+ACTIVE_IDENTITY launcher=44696 owner=44696 hwnd=13176914 shell=11884 session={b01d8c62-4999-49ee-9fb1-5bdaf3210c87}
+ACTIVE_COMMAND InteractionToggle confirmed Status { availability: Managed, state: Some(Active), target_id: Some(TargetId(1)) }
+ACTIVE_STATE Active native confirmed; shell=11884 session={b01d8c62-4999-49ee-9fb1-5bdaf3210c87}
+ACTIVE_CLEANUP exact nonce fixture exited and target closed
+PHASE sink-cleanup: owned window destroyed
+PASS: 1 preexisting Terminal window style/visibility witnesses unchanged
+
+ACTIVE_PROOF_FAILED renderer compatibility unproven: passive=false background=[26, 104, 143] expected=[26, 104, 143] tolerance=6 opaque_white_samples=0
+Terminal proof: renderer compatibility unproven: passive=false background=[26, 104, 143] expected=[26, 104, 143] tolerance=6 opaque_white_samples=0
+
+PROOF_EXIT=1 TIMED_OUT=False
+OWNED_REMAINING=0
+RUNNER_EXIT=0
+EXTERNAL_HASH_BASELINES_UNCHANGED
