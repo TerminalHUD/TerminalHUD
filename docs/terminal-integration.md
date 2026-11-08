@@ -114,3 +114,9 @@ file does not establish that a running Terminal loaded its profile. An unknown
 profile GUID may silently fall back to ordinary defaults, including inherited
 launch behavior; native launch must remain blocked until that ambiguity is
 resolved without modifying the user's main settings.
+
+The [native feasibility report](windows-terminal-feasibility.md) records a
+transient foreground activation in the tested portable fullscreen startup path.
+Normal adapter Passive launch now returns `Unsupported` before spawning. The
+launch-only diagnostics do not establish real-Terminal state, input or rendering
+support; those acceptance items remain outstanding.

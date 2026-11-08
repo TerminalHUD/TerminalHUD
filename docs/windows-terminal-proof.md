@@ -46,9 +46,20 @@ is not a launch-safety guarantee; use the explicit CLI fixture command with know
 non-elevated ConPTY defaults. Preserve normalized bytes as evidence; reusing the
 fixture requires reviewing/restoring only owned configuration and stale markers.
 
-After preparing the reviewed isolated configuration, build the native example
-and explicitly run `terminal-proof probe <absolute-task-directory>`. It briefly
-shows an owned blue primary-monitor sink and the dedicated test Terminal, and
-sends one guarded click only inside that sink. The probe rejects unknown sources,
-stale handshake/exit markers, and unsafe startup/profile settings. It never
-installs a global fragment. Native CI compiles it but does not run desktop proof.
+After preparing the reviewed isolated configuration, build the native example:
+
+```powershell
+cargo build -p terminalhud-windows-terminal --example terminal-proof --locked
+terminal-proof diagnose <absolute-task-directory> 4
+# Separately reviewed comparison only:
+terminal-proof diagnose <absolute-task-directory> 8
+```
+
+The final argument allows only `4` (`SW_SHOWNOACTIVATE`) or `8` (`SW_SHOWNA`),
+which are distinct [documented show commands](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow).
+This is a diagnostic-only example, separate from the guarded normal launch APIs.
+It shows the owned blue primary-monitor sink and dedicated test Terminal, records
+numeric/classified foreground events, then requests nonce fixture exit. It has
+no backend construction, styles, state transitions, renderer checks or input.
+Unknown namespaces, unsafe startup settings and stale protocol markers refuse
+execution. Native CI compiles it but never runs this desktop experiment.

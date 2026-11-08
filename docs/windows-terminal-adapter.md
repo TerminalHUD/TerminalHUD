@@ -17,8 +17,10 @@ elevation, and overrides focused/unfocused HUD appearance. Original settings and
 profiles remain untouched. It is a preview, not a proof that Terminal loaded it.
 
 `LaunchPlan` requests a fresh named fullscreen window at the supplied primary
-monitor origin. `native::start` supplies `SW_SHOWNOACTIVATE` before Passive
-creation; the caller must establish safe runtime-profile/fallback preconditions.
+monitor origin. Normal `native::start` and `start_with_command` return
+`Unsupported` for Passive before spawning: the tested fullscreen startup path
+activated transiently. Active callers must still establish safe runtime-profile
+and fallback preconditions; this does not certify rendering compatibility.
 The returned process can delegate to another Terminal process. Native correlation
 retains live identities and checks every ancestry edge up to the exact candidate
 owner PID/executable, without traversing irrelevant upstream parents. It
@@ -26,6 +28,9 @@ excludes preexisting HWNDs, and checks the exact installed executable in additio
 to a nonce/profile/session shell handshake. It does not make intercall HWND
 lifetime changes atomic. The [controlled portable proof](windows-terminal-proof.md)
 uses isolated synthetic settings; `preview` only writes a fresh task directory.
+
+The [native feasibility report](windows-terminal-feasibility.md) records the
+startup blocker and remaining unproven acceptance items.
 
 ## Installed-version source expectations
 
@@ -43,8 +48,8 @@ not native GUI/input/rendering evidence:
   it may select a command-matched profile or `ProfileDefaults`; otherwise it
   selects the ordinary default. Supplying a fixture command alone cannot prove
   non-elevated ConPTY launch or absence of inherited launch behavior. Do not
-  launch against an unverified fragment cache. No safe runtime-catalog guard or
-  alternate-connection/startup-action validation is implemented yet.
+  launch against an unverified fragment cache. No installed runtime-catalog guard or
+  complete profile-source resolution is implemented yet.
 - [AppLogic](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalApp/AppLogic.cpp#L304-L340)
   watches the main settings filename. A fragment on disk is insufficient reload
   evidence; do not write main settings or restart unrelated sessions to force it.

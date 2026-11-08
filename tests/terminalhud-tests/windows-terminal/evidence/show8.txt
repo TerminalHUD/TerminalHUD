@@ -1,0 +1,4 @@
+
+Terminal proof: native observation timed out
+
+EXIT=1
