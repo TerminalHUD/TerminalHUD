@@ -143,3 +143,30 @@ owned-region in-memory capture will replace those repeated readbacks while
 preserving exact coordinates, step, color thresholds, renderer settings and the
 45-second outer budget. All run3 artifacts, output marker, normalized settings,
 state, original fixture and manifests were archived before this change.
+
+## Bounded capture measurement and retained-diagnostic gap
+
+The [fourth Active trace](../tests/terminalhud-tests/windows-terminal/evidence/active-run4.txt)
+used reviewed revision `96f45bcedbfcb0020413a4dd8689d08b30eb1b9d` and fixture SHA256
+`48cda1f58f8f009f478ad4f59c368cbd605e8e61bb1928beb71d004ae7e86b29`.
+Normal Active creation, exact ownership/session, primary fullscreen/topmost/focus
+and the strict Active RGB predicate passed. RequestPassive retained the direct
+`FocusRefused` warning while final exact saved-sink foreground and strict native
+Passive state/style assertions passed.
+
+The bounded capture completed 39 samples (one Active, 38 Passive), with capture
+times of 6–15 ms and scan times of 7–15 ms. Passive never met the unchanged pixel
+predicate. The next read crossed its three-second sample deadline and reported
+`capture censored: sample deadline exhausted`, erasing the last completed
+nonmatching sample's diagnostic. The outer runner did not time out. Actual
+Passive background/count values were not logged, so the mismatch's cause remains
+unproven; this is not the old outer-cancellation/identity failure.
+
+No click, Hidden/session loop or normal successful-Quit assertion ran. Error-path
+controller Quit reported no restoration error, nonce fixture/target and sink
+cleanup completed, and zero owned processes remained. The unrelated Terminal
+witness, external settings/fragment hashes and source namespace set were
+unchanged. Run4's exact settings/state/markers/fixture/logs/manifests are preserved
+in the task runtime's `evidence-active-run4`; its postrun manifest SHA256 is
+`5bf209b7f8a453cdc1353dcc7e376d2666d5a6a27a1635fa8670f44e2341fdc3`.
+Wrapper exit zero records completed cleanup, not acceptance: the proof exited 1.

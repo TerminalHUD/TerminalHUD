@@ -144,4 +144,7 @@ within ownership/pure processing; timing logs separate ownership, capture and
 scan durations. Synchronous GDI calls are not made cancellable. A call that
 returns after budget exhaustion produces censored capture evidence rather than
 a renderer failure. The outer 45-second nonce-cleanup deadline is unchanged.
-This capture path still requires its own reviewed native acceptance run.
+The reviewed run4 measured millisecond captures and passed Active rendering;
+Passive exhausted its sample budget after completed nonmatching samples. See the
+[measured limitations](windows-terminal-feasibility.md#bounded-capture-measurement-and-retained-diagnostic-gap).
+Full Passive/Hidden/input/session/Quit acceptance remains incomplete.
