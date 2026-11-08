@@ -26,3 +26,7 @@ path = "../../tests/hudswitch-test-window/main.rs"
 [[test]]
 name = "windows_backend"
 path = "../../tests/hudswitch-backend-tests/windows_backend.rs"
+
+[[test]]
+name = "hotkeys"
+path = "../../tests/hudswitch-backend-tests/hotkeys.rs"
