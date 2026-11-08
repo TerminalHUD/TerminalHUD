@@ -19,7 +19,7 @@ pub(super) fn verify(target: &Launched, sink: &Underlay, passive: bool) -> Resul
     let expected = render_evidence::expected_background(passive);
     let deadline = Instant::now() + Duration::from_secs(3);
     loop {
-        let sample = render_sample::read(target, sink, &rect)?;
+        let sample = render_sample::read(target, sink, &rect, passive, deadline)?;
         let diagnostic = format!(
             "background={:?} opaque_white_samples={} brightest_rgb={:?} brightest_point={:?} scan_bounds={:?}",
             sample.background,

@@ -13,6 +13,10 @@ mod launch;
 mod output_marker;
 #[path = "cases/profiles.rs"]
 mod profiles;
+#[path = "cases/render_capture.rs"]
+mod render_capture;
+#[path = "proof/windows/active/render_evidence.rs"]
+mod render_evidence;
 #[path = "cases/underlay.rs"]
 mod underlay;
 

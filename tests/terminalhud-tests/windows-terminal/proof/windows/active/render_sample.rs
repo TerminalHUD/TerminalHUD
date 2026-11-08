@@ -1,11 +1,14 @@
-//! Bounded owned-region pixel capture and failure metadata, without screenshots.
+//! Fixed owned-region capture, cheap hit testing, and unchanged pure RGB sampling.
 use super::{
     super::{Result, underlay::Underlay},
-    identity,
     launch::Launched,
+    render_capture,
     render_evidence::Brightest,
+    render_ownership::{hit, validate},
+    render_region::Region,
 };
-use windows_sys::Win32::{Foundation::*, Graphics::Gdi::*};
+use std::time::Instant;
+use windows_sys::Win32::Foundation::*;
 #[derive(Debug)]
 pub(super) struct Sample {
     pub(super) background: [i32; 3],
@@ -13,62 +16,75 @@ pub(super) struct Sample {
     pub(super) brightest: Brightest,
     pub(super) bounds: (i32, i32, i32, i32),
 }
-pub(super) fn read(target: &Launched, sink: &Underlay, rect: &RECT) -> Result<Sample> {
-    let dc = unsafe { GetDC(std::ptr::null_mut()) };
-    if dc.is_null() {
-        return Err("GetDC for owned pixel proof failed".into());
-    }
-    let result = sample(dc, target, sink, rect);
-    unsafe {
-        ReleaseDC(std::ptr::null_mut(), dc);
-    }
-    result
-}
-fn pixel(dc: HDC, target: &Launched, sink: &Underlay, point: POINT) -> Result<[i32; 3]> {
-    identity::owned_point(target, sink, point)?;
-    let value = unsafe { GetPixel(dc, point.x, point.y) };
-    if value == CLR_INVALID {
-        return Err("owned pixel read failed".into());
-    }
-    Ok([
-        (value & 255) as i32,
-        ((value >> 8) & 255) as i32,
-        ((value >> 16) & 255) as i32,
-    ])
-}
-fn sample(dc: HDC, target: &Launched, sink: &Underlay, rect: &RECT) -> Result<Sample> {
-    let background = pixel(
-        dc,
-        target,
-        sink,
-        POINT {
-            x: rect.left + (rect.right - rect.left) * 3 / 4,
-            y: rect.top + (rect.bottom - rect.top) * 3 / 4,
-        },
-    )?;
-    let bounds = (
+pub(super) fn read(
+    target: &Launched,
+    sink: &Underlay,
+    rect: &RECT,
+    passive: bool,
+    deadline: Instant,
+) -> Result<Sample> {
+    let region = Region::new(
         rect.left,
         rect.top,
-        rect.left + ((rect.right - rect.left) / 3).min(512),
-        rect.top + ((rect.bottom - rect.top) / 2).min(512),
-    );
-    let mut result = Sample {
-        background,
-        white: 0,
-        brightest: Brightest {
-            rgb: [0, 0, 0],
-            point: (bounds.0, bounds.1),
-        },
-        bounds,
-    };
-    for y in (bounds.1..bounds.3).step_by(8) {
-        for x in (bounds.0..bounds.2).step_by(8) {
-            let rgb = pixel(dc, target, sink, POINT { x, y })?;
-            result.brightest.consider(rgb, (x, y));
-            if rgb.into_iter().all(|v| v >= 245) {
-                result.white += 1;
-            }
+        ((rect.right - rect.left) / 3).min(512) as usize,
+        ((rect.bottom - rect.top) / 2).min(512) as usize,
+    )?;
+    let background = Region::new(
+        rect.left + (rect.right - rect.left) * 3 / 4,
+        rect.top + (rect.bottom - rect.top) * 3 / 4,
+        1,
+        1,
+    )?;
+    let ownership_started = Instant::now();
+    let ownership = (|| {
+        validate(target, sink, rect, passive, deadline)?;
+        for (x, y) in region.points().chain(background.points()) {
+            render_capture::budget(deadline)?;
+            hit(target, sink, x, y)?;
         }
-    }
-    Ok(result)
+        Ok::<_, Box<dyn std::error::Error>>(())
+    })();
+    println!(
+        "ACTIVE_CAPTURE ownership_before_ms={} result_ok={}",
+        ownership_started.elapsed().as_millis(),
+        ownership.is_ok()
+    );
+    ownership?;
+    let capture_started = Instant::now();
+    let images = (|| {
+        Ok::<_, Box<dyn std::error::Error>>((
+            render_capture::read(region, deadline)?,
+            render_capture::read(background, deadline)?,
+        ))
+    })();
+    let capture_duration = capture_started.elapsed();
+    println!(
+        "ACTIVE_CAPTURE capture_ms={} result_ok={}",
+        capture_duration.as_millis(),
+        images.is_ok()
+    );
+    let (pixels, bg) = images?;
+    validate(target, sink, rect, passive, deadline)?;
+    let scan_started = Instant::now();
+    let processed = (|| {
+        for (x, y) in region.points().chain(background.points()) {
+            render_capture::budget(deadline)?;
+            hit(target, sink, x, y)?;
+        }
+        let summary = pixels.summarize(deadline)?;
+        validate(target, sink, rect, passive, deadline)?;
+        Ok::<_, Box<dyn std::error::Error>>(Sample {
+            background: bg.rgb(background.left(), background.top())?,
+            white: summary.white,
+            brightest: summary.brightest,
+            bounds: (region.left(), region.top(), region.right(), region.bottom()),
+        })
+    })();
+    println!(
+        "ACTIVE_CAPTURE scan_ms={} capture_ms={} result_ok={}",
+        scan_started.elapsed().as_millis(),
+        capture_duration.as_millis(),
+        processed.is_ok()
+    );
+    processed
 }

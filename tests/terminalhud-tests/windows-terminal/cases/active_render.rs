@@ -1,5 +1,4 @@
-#[path = "../proof/windows/active/render_evidence.rs"]
-mod evidence;
+use super::render_evidence as evidence;
 #[test]
 fn renderer_proof_requires_both_expected_background_and_opaque_fixture_samples() {
     assert!(evidence::consistent([26, 104, 143], 10, false));

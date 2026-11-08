@@ -117,3 +117,31 @@ fails. Quit likewise verifies original owned style/visibility and same live
 session before accepting a warning, and additionally requires exact sink
 foreground when a quit warning occurs. This is proof reporting; no backend
 focus behavior, permission grant, key binding or input workaround is changed.
+
+## Bounded pixel capture
+
+The proof captures only the existing clipped foreground sample patch (at most
+512×512) and the existing one-pixel background point into private in-memory
+32-bit top-down DIBs. It uses `SRCCOPY | CAPTUREBLT` so layered-window composition
+is included, then `GdiFlush` before direct bitmap-memory access. Owned copies
+use checked dimensions, stride, byte length and BGRA-to-RGB coordinates. The
+selected original bitmap is restored before bitmap/DC deletion; partial setup
+failures release only initialized owned resources. Native failure codes are
+captured before cleanup can overwrite them. No image file or desktop export is
+created. Primary references: [BitBlt](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-bitblt),
+[CreateDIBSection](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createdibsection)
+and [GdiFlush](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-gdiflush).
+
+Retained target/sink/session, fullscreen geometry and required foreground are
+validated before and after capture. Sample-point ownership uses bounded cheap
+window-root comparisons, with no process/file query or screen `GetPixel` per
+pixel. These separate checks do not make capture atomic against concurrent
+window changes. Pure processing uses exactly the previous screen coordinates,
+step8, background expectation, white threshold/count and brightest-pixel rule.
+
+The same three-second sample budget is checked before/after native capture and
+within ownership/pure processing; timing logs separate ownership, capture and
+scan durations. Synchronous GDI calls are not made cancellable. A call that
+returns after budget exhaustion produces censored capture evidence rather than
+a renderer failure. The outer 45-second nonce-cleanup deadline is unchanged.
+This capture path still requires its own reviewed native acceptance run.
