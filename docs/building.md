@@ -152,9 +152,15 @@ The optional bounded event-loop comparison is separate from the production
 runtime. Each invocation briefly creates its own tray icon and exits:
 
 ```powershell
-cargo run --locked -p terminalhud-app --features loop-comparison --example shell-loop-probe -- native
-cargo run --locked -p terminalhud-app --features loop-comparison --example shell-loop-probe -- tao
+$loopReports = Join-Path $env:TEMP 'terminalhud-ter-10-loop-reports'
+New-Item -ItemType Directory -Force -Path $loopReports | Out-Null
+cargo run --locked -p terminalhud-app --features loop-comparison --example shell-loop-probe -- native "$loopReports\native.txt"
+cargo run --locked -p terminalhud-app --features loop-comparison --example shell-loop-probe -- tao "$loopReports\tao.txt"
 ```
+
+Each invocation requires both the loop mode and a report-file path. Keep these
+task-owned reports on the native Windows filesystem, separate from the WSL UNC
+source path, and choose a distinct report directory for concurrent worktrees.
 
 See [the evaluation](ui-toolkit-evaluation.md) for the measured selection and
 [the shell guide](application-shell.md) for prototype limits and IPC behavior.
