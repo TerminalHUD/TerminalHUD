@@ -32,17 +32,17 @@ for portable checks but does not establish native Windows behavior.
 
 This is the long-term architecture in [architecture.md](architecture.md), with
 Windows components implemented first. Future platform backends and adapters fit
-alongside these paths. The foundation creates crate boundaries, not the runtime
-state machine, window backend, tray, IPC, or terminal adapter behavior. The app
-binary is currently an empty composition-root scaffold and provides no HUD.
+alongside these paths. The application shell provides an explicit simulated prototype. Real Windows
+Terminal composition is a separate integration task; the prototype creates no
+terminal window. See [application shell](application-shell.md) for its commands
+and security boundary.
 
 `python3 scripts/check_workspace.py` obtains Cargo metadata and validates the
 reviewed crate locations and runtime dependency direction. Platform-specific
 dependencies are excluded from the portable cores. New architectural boundaries
-must update that check deliberately. No behavioral Rust tests exist yet;
-`cargo test` currently proves test-harness compilation/linking and execution.
-Real suites belong in their designated test directories and must be registered
-with the owning crate so workspace tests discover them.
+must update that check deliberately. Portable controller, product command,
+protocol, native backend and shell IPC suites are registered with their owning
+crates. Visible desktop suites are explicitly ignored during unattended tests.
 
 ## Portable checks from WSL or Linux
 
@@ -118,3 +118,43 @@ Both jobs check the architecture map, formatting, Clippy, all-target builds,
 workspace tests, and the toolchain probe. Repository/documentation checks run
 separately. The required `check` job aggregates their results, so a failing or
 skipped prerequisite cannot produce a passing required check.
+
+## Tray prototype and console CLI
+
+Build both application binaries together from native PowerShell:
+
+```powershell
+cargo build --locked -p terminalhud-app --bins
+& "$env:CARGO_TARGET_DIR\debug\terminalhud.exe" --prototype run
+& "$env:CARGO_TARGET_DIR\debug\terminalhud.exe" --prototype status
+& "$env:CARGO_TARGET_DIR\debug\terminalhud.exe" --prototype interaction-toggle
+& "$env:CARGO_TARGET_DIR\debug\terminalhud.exe" --prototype quit
+```
+
+`terminalhud.exe` is the synchronous console CLI: it prints a reply and exits 0,
+or prints an error to stderr and exits 2. `run` starts its sibling
+`terminalhud-shell.exe`, waits for an authenticated controller status reply, and
+returns. The shell binary uses the Windows GUI subsystem, owns the tray and
+message loop, and creates no console or visible main window. Ship the two
+binaries together. Both require `--prototype`; these commands simulate HUD state.
+A native PowerShell call made through `powershell.exe -NoProfile` from WSL also
+waits for the console CLI and preserves its captured stdout and exit code.
+
+The unattended native shell suite is included in `cargo test --workspace`.
+Run the visible shell proof only in a real desktop session with the desktop
+slot reserved and no other interactive test running:
+
+```powershell
+cargo test --locked -p terminalhud-app --test shell_ipc tray_menu_and_ipc_remain_responsive_in_modal_loop -- --ignored --nocapture --test-threads=1
+```
+
+The optional bounded event-loop comparison is separate from the production
+runtime. Each invocation briefly creates its own tray icon and exits:
+
+```powershell
+cargo run --locked -p terminalhud-app --features loop-comparison --example shell-loop-probe -- native
+cargo run --locked -p terminalhud-app --features loop-comparison --example shell-loop-probe -- tao
+```
+
+See [the evaluation](ui-toolkit-evaluation.md) for the measured selection and
+[the shell guide](application-shell.md) for prototype limits and IPC behavior.

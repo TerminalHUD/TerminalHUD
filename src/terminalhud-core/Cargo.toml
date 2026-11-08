@@ -11,3 +11,7 @@ workspace = true
 
 [dependencies]
 hudswitch-core.workspace = true
+
+[[test]]
+name = "commands"
+path = "../../tests/terminalhud-tests/app-shell/commands/mod.rs"

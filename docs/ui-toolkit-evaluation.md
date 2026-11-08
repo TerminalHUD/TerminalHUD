@@ -1,6 +1,6 @@
 # Application shell evaluation
 
-Status: no general UI toolkit required for v1.
+Status: native Windows loop with `tray-icon` selected for the bounded shell; no general UI toolkit required for v1.
 
 TerminalHUD is primarily a long-running background process. Its required user
 interface is a native tray icon and menu; configuration can be a validated JSON
@@ -87,19 +87,42 @@ prototype that proves:
 8. A per-user Windows installer installs, upgrades, and removes the prototype.
 9. The tray shell at least compiles and displays on one Linux desktop.
 
-## Proposed Cargo workspace
+## Workspace boundaries
+
+The authoritative layout is [architecture.md](architecture.md), implemented as:
 
 ```text
-crates/
-├── hudswitch-core/
-├── hudswitch-windows/
-├── terminalhud-core/
-├── terminalhud-windows/
-├── terminalhud-tray/
-└── terminal-adapter-windows-terminal/
-apps/
-└── terminalhud/
+src/
+├── hudswitch-core/                   # portable generic controller
+├── hudswitch-windows/                # native window backend
+├── terminalhud-core/                 # portable product commands
+├── terminal-adapters/windows-terminal/
+└── terminalhud-app/                  # console CLI and GUI tray host
 ```
 
-`terminalhud-tray` depends on product application services, not the reverse.
+The tray and native event loop belong to the application package. Product core
+has no toolkit, terminal, or OS dependencies. The app obtains portable backend
+contracts through product core's deliberate integration reexports.
 
+## Windows shell experiment
+
+The bounded `shell-loop-probe` example compares `tray-icon` 0.26.1 with a native
+Win32 message loop and optional Tao 0.37.2. Each creates a GUI-subsystem process,
+adds one tray icon, receives one queued worker event, and exits after 750 ms.
+On the Windows 11 desktop the native run reported 801 ms and Tao 803 ms; both
+reported `queued_events=1 icon_rect=true console=0`. These short runs establish
+tray/event-loop compatibility, not idle CPU or performance comparisons.
+
+Select the native Windows message loop for this shell: it keeps one authoritative
+UI/controller thread and needs no additional event-loop framework. `tray-icon`
+is a Windows-only runtime dependency; Tao is optional and confined to the
+comparison feature. Neither dependency enters a portable core. Current primary
+API references: [tray-icon](https://docs.rs/tray-icon/0.26.1/tray_icon/),
+[Tao](https://docs.rs/tao/0.37.2/tao/), and
+[Win32 message loops](https://learn.microsoft.com/en-us/windows/win32/winmsg/using-messages-and-message-queues).
+
+The explicit prototype proves IPC-driven simulated controller state, a retained
+single-instance endpoint and orderly lifecycle. It is not the completed v1
+composition. The checklist above remains a broader roadmap: hotkeys, actual
+backend events, configuration reload, startup, installer and Linux desktop
+validation are outside TER-10. See [the shell guide](application-shell.md).

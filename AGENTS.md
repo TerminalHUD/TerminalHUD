@@ -12,7 +12,8 @@ Keep HudSwitch core independent of terminal, UI, and OS-specific code. The MVP
 uses Rust, Windows 11, and a dedicated Windows Terminal process; other platforms
 and an embedded terminal remain future work.
 
-Run the checks in `ratpack.json` before handoff. See [building](docs/building.md)
+Follow [source organization standards](docs/standards.md) when writing or
+reorganizing code. Run the checks in `ratpack.json` before handoff. See [building](docs/building.md)
 for the workspace map, portable checks, and native Windows build/test path.
 Windows behavior requires native Windows evidence; WSL-only tests are insufficient.
 The persistent coordinator handles coordination only; workflow support owns setup
