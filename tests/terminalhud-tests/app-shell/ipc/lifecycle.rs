@@ -26,7 +26,14 @@ fn authenticated_cli_roundtrip_singleton_and_reply_before_quit() {
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(stdout.contains("mode=prototype"));
     assert!(stdout.contains(&format!("pid={pid}")));
-    assert!(stdout.contains("Passive"));
+    assert!(stdout.contains("state=Some(Active)"));
+    assert_eq!(
+        primary.call(Command::Status).status.state,
+        Some(State::Active)
+    );
+    let passive = primary.call(Command::Passive);
+    assert_eq!(passive.code, protocol::ReplyCode::Ok);
+    assert_eq!(passive.status.state, Some(State::Passive));
     let duplicate = ProcessCommand::new(env!("CARGO_BIN_EXE_terminalhud-shell"))
         .args([
             "--prototype",
@@ -38,6 +45,10 @@ fn authenticated_cli_roundtrip_singleton_and_reply_before_quit() {
         .unwrap();
     assert!(duplicate.status.success());
     assert_eq!(primary.call(Command::Status).process_id, pid);
+    assert_eq!(
+        primary.call(Command::Status).status.state,
+        Some(State::Passive)
+    );
     assert_eq!(
         primary.call(Command::VisibilityToggle).status.state,
         Some(State::Hidden {
