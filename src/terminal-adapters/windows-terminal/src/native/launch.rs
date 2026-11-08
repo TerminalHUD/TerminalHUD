@@ -48,6 +48,11 @@ pub struct LauncherProcess {
 /// Start an explicitly discovered Terminal executable. Passive intent is provided
 /// in STARTUPINFO before process creation and survives supported Terminal handoff.
 /// The returned launcher PID is not a Terminal-window ownership proof.
+///
+/// Precondition: the caller has independently verified that Terminal's runtime
+/// catalog contains this profile. A file on disk is insufficient: an unknown
+/// GUID may fall back to an ordinary profile, including its elevation/connection
+/// settings. The unfinished proof deliberately does not call this operation.
 pub fn start(
     plan: &LaunchPlan,
     executable: &Path,

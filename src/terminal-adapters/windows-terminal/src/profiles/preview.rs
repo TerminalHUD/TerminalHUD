@@ -34,6 +34,7 @@ impl Catalog {
         profile.insert("guid".into(), json!(new_guid.as_str()));
         profile.insert("name".into(), json!(format!("HUD — {}", source.name)));
         profile.insert("hidden".into(), json!(false));
+        profile.insert("elevate".into(), json!(false));
         profile.insert("opacity".into(), json!(active_opacity));
         profile.insert("useAcrylic".into(), json!(false));
         let mut unfocused = match profile.remove("unfocusedAppearance") {
