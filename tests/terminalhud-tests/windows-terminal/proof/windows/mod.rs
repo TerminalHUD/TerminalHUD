@@ -7,7 +7,9 @@ mod preview;
 mod session;
 mod setup;
 mod shell;
+mod show;
 mod sources;
+mod startup;
 mod underlay;
 mod witness;
 use std::path::Path;
@@ -25,9 +27,10 @@ pub fn run() -> Result<()> {
             Path::new(arguments.get(2).ok_or("missing proof directory")?),
             arguments.get(3).ok_or("missing nonce")?,
         ),
-        Some("diagnose") => diagnostic::run(Path::new(
-            arguments.get(2).ok_or("missing proof directory")?,
-        )),
+        Some("diagnose") => diagnostic::run(
+            Path::new(arguments.get(2).ok_or("missing proof directory")?),
+            show::Show::parse(arguments.get(3).map(String::as_str).unwrap_or("4"))?,
+        ),
         _ => Err(
             "usage: terminal-proof preview <installed-terminal-exe> | diagnose <proof-dir>".into(),
         ),

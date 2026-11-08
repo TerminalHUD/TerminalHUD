@@ -4,6 +4,7 @@ use windows_sys::Win32::Foundation::GetLastError;
 pub enum NativeError {
     Win32(&'static str, u32),
     Invalid(&'static str),
+    Unsupported(&'static str),
     Correlation(crate::Error),
     AncestryReused { child_pid: u32, parent_pid: u32 },
 }

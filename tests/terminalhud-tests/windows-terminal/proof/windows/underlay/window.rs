@@ -20,17 +20,6 @@ unsafe extern "system" fn procedure(
             }
             0
         }
-        WM_LBUTTONDOWN => {
-            unsafe {
-                SetWindowLongPtrW(
-                    hwnd,
-                    GWLP_USERDATA,
-                    GetWindowLongPtrW(hwnd, GWLP_USERDATA) + 1,
-                );
-            }
-            0
-        }
-        value if value == WM_APP + 1 => unsafe { GetWindowLongPtrW(hwnd, GWLP_USERDATA) },
         _ => unsafe { DefWindowProcW(hwnd, message, wparam, lparam) },
     }
 }

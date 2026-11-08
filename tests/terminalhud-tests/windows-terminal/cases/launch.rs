@@ -30,7 +30,7 @@ fn explicit_command_rejects_extra_terminal_commands_before_process_creation() {
             nonce: guid(5),
             profile: guid(4),
         },
-        intent: VisibleState::Passive,
+        intent: VisibleState::Active,
         primary_origin: (0, 0),
     };
     let executable = std::env::current_exe().unwrap();
@@ -48,4 +48,48 @@ fn explicit_command_rejects_extra_terminal_commands_before_process_creation() {
         ),
         Err(NativeError::Invalid(_))
     ));
+}
+
+#[cfg(windows)]
+#[test]
+fn normal_passive_entrypoints_refuse_before_path_checks_or_spawn() {
+    use terminalhud_windows_terminal::native::{NativeError, start, start_with_command};
+    let plan = LaunchPlan {
+        identity: LaunchIdentity {
+            nonce: guid(5),
+            profile: guid(4),
+        },
+        intent: VisibleState::Passive,
+        primary_origin: (0, 0),
+    };
+    let exe = std::path::Path::new("C:\\TerminalHUD-nonexistent-guard-test.exe");
+    let cwd = std::path::Path::new("C:\\");
+    assert!(matches!(
+        start(&plan, exe, cwd),
+        Err(NativeError::Unsupported(_))
+    ));
+    assert!(matches!(
+        start_with_command(&plan, exe, cwd, &["fixture.exe".into()]),
+        Err(NativeError::Unsupported(_))
+    ));
+}
+
+#[cfg(windows)]
+#[path = "../proof/windows/show.rs"]
+mod diagnostic_show;
+#[cfg(windows)]
+#[test]
+fn diagnostic_argument_mapping_allows_only_the_two_reviewed_show_commands() {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{SW_SHOWNA, SW_SHOWNOACTIVATE};
+    assert_eq!(
+        diagnostic_show::Show::parse("4").unwrap().value(),
+        SW_SHOWNOACTIVATE as u16
+    );
+    assert_eq!(
+        diagnostic_show::Show::parse("8").unwrap().value(),
+        SW_SHOWNA as u16
+    );
+    for value in ["0", "1", "hide", "active", "", "4;8"] {
+        assert!(diagnostic_show::Show::parse(value).is_err());
+    }
 }

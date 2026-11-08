@@ -12,9 +12,9 @@ pub struct LauncherProcess {
     _process: OwnedHandle,
 }
 
-/// Start an explicitly discovered Terminal executable. Passive intent is provided
-/// in STARTUPINFO before process creation and survives supported Terminal handoff.
-/// The returned launcher PID is not a Terminal-window ownership proof.
+/// Start an explicitly discovered Terminal executable. Normal Passive fullscreen
+/// requests return `Unsupported` before spawning: the measured release activates
+/// transiently. A returned launcher PID never proves window ownership.
 ///
 /// Precondition: independently verify the runtime profile, or establish a fresh
 /// isolated configuration whose profile AND fallback command/connection/elevation
@@ -26,7 +26,7 @@ pub fn start(
     executable: &Path,
     working_directory: &Path,
 ) -> Result<LauncherProcess, NativeError> {
-    create(plan, executable, working_directory, &[])
+    super::support::run(plan, || create(plan, executable, working_directory, &[]))
 }
 
 /// Supply an explicit replacement command for a controlled launch. This does
@@ -39,10 +39,12 @@ pub fn start_with_command(
     working_directory: &Path,
     command: &[String],
 ) -> Result<LauncherProcess, NativeError> {
-    if command.first().is_none_or(|argument| argument.is_empty()) {
-        return Err(NativeError::Invalid("explicit launch command is required"));
-    }
-    create(plan, executable, working_directory, command)
+    super::support::run(plan, || {
+        if command.first().is_none_or(|argument| argument.is_empty()) {
+            return Err(NativeError::Invalid("explicit launch command is required"));
+        }
+        create(plan, executable, working_directory, command)
+    })
 }
 
 fn create(

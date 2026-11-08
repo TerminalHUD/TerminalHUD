@@ -1,4 +1,6 @@
-use super::{Result, foreground::Monitor, session::Session, setup::Setup, underlay::Underlay};
+use super::{
+    Result, foreground::Monitor, session::Session, setup::Setup, show::Show, underlay::Underlay,
+};
 use hudswitch_core::VisibleState;
 use std::{
     collections::HashSet,
@@ -12,7 +14,7 @@ pub(super) struct Launched {
     pub session: Session,
     pub foreground_changed: bool,
 }
-pub(super) fn verified(setup: &Setup, sink: &Underlay) -> Result<Launched> {
+pub(super) fn verified(setup: &Setup, sink: &Underlay, show: Show) -> Result<Launched> {
     if unsafe { GetForegroundWindow() } != sink.hwnd() {
         return Err(
             "owned sink is not foreground; refusing launch instead of bypassing focus policy"
@@ -33,11 +35,7 @@ pub(super) fn verified(setup: &Setup, sink: &Underlay) -> Result<Launched> {
         intent: VisibleState::Passive,
         primary_origin: (0, 0),
     };
-    println!("CREATE_INTENT Passive STARTF_USESHOWWINDOW SW_SHOWNOACTIVATE(4)");
-    let mut session = Session::new(
-        setup,
-        native::start_with_command(&plan, &setup.terminal, &setup.task, &setup.command)?,
-    );
+    let mut session = Session::new(setup, super::startup::start(setup, &plan, show)?);
     let proof = session.handshake()?;
     let deadline = Instant::now() + Duration::from_secs(5);
     let verified = loop {

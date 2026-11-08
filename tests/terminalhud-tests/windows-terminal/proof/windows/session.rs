@@ -7,16 +7,16 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-use terminalhud_windows_terminal::{Guid, SessionProof, native::LauncherProcess};
+use terminalhud_windows_terminal::{Guid, SessionProof};
 use windows_sys::Win32::{Foundation::WAIT_TIMEOUT, System::Threading::*};
 
 pub(super) struct Session {
     task: PathBuf,
-    pub _launcher: LauncherProcess,
+    pub _launcher: OwnedHandle,
     shell: Option<OwnedHandle>,
 }
 impl Session {
-    pub(super) fn new(setup: &Setup, launcher: LauncherProcess) -> Self {
+    pub(super) fn new(setup: &Setup, launcher: OwnedHandle) -> Self {
         Self {
             task: setup.task.clone(),
             _launcher: launcher,

@@ -15,24 +15,6 @@ impl Underlay {
     pub(super) fn hwnd(&self) -> HWND {
         self.hwnd as HWND
     }
-    pub(super) fn clicks(&self) -> Result<usize> {
-        let mut result = 0;
-        if unsafe {
-            SendMessageTimeoutW(
-                self.hwnd(),
-                WM_APP + 1,
-                0,
-                0,
-                SMTO_ABORTIFHUNG,
-                500,
-                &mut result,
-            )
-        } == 0
-        {
-            return Err("owned underlay did not respond".into());
-        }
-        Ok(result)
-    }
 }
 impl Drop for Underlay {
     fn drop(&mut self) {

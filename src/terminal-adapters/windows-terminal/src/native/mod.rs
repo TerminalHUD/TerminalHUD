@@ -5,6 +5,7 @@ mod error;
 mod identity;
 mod launch;
 mod process;
+mod support;
 mod verify;
 mod windows;
 pub use ancestry::ancestry;
