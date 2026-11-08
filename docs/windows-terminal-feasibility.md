@@ -6,10 +6,11 @@ Stable fragment-cache recognition were not tested.
 
 **Scope and safety.** Runs used an isolated nonce-owned portable fixture and
 synthetic settings, verifying exact HWND/process ancestry, executable, profile,
-and session before control. Only the owned target was observed or controlled.
-Runs ended with zero owned processes; the unrelated Terminal witness, user
-settings, and global fragments remained unchanged. No physical input, user
-settings changes, or unsupported launch bypass was used.
+and session before control. Mutations and pixel sampling were restricted to
+owned fixtures; unrelated Terminal windows were inspected read-only as witnesses.
+Runs ended with zero owned processes; user settings and global fragments remained
+unchanged. No physical input, user settings changes, or unsupported launch
+bypass was used.
 
 **Confirmed findings.** Fresh HUDs start Active per [ADR 0009](decisions/0009-active-hud-creation.md);
 Passive and Hidden remain transitions. Bindings are unchanged. The portable
@@ -27,10 +28,9 @@ did not restore white. The cause is unproven; the initial style/lifecycle and
 0% boundary remain possible factors.
 
 **Acceptance boundary.** The captured post-failure controls do not establish the
-cause or a fix. A private paired 0%/1% diagnostic is not a valid comparison
-because it followed a failed pre-receipt wait. The 1% setting is unapproved and
-does not satisfy 0% acceptance. Physical click routing, remaining Hidden/session
-loops, and the normal successful-Quit/session-preservation phase have not run.
+cause or a fix. No 0% reference has reached appearance measurement. The 1%
+diagnostic is unapproved and does not satisfy 0% acceptance. Physical click
+routing, remaining Hidden/session loops, and the normal successful-Quit/session-preservation phase have not run.
 A direct focus warning alone does not prove whether a particular run took the
 hide/show branch. The corrected proof acquisition allows normal backend
 activation; resolution of the earlier timeout has not been empirically
