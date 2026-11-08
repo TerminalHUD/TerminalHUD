@@ -1,164 +1,89 @@
-# Controlled Windows Terminal portable proof
+# Controlled Windows Terminal acceptance proof
 
-A separate, official unpackaged ZIP in a fresh task directory can avoid trusting
-an installed process's cached profile catalog. Microsoft's [portable-mode
-contract](https://learn.microsoft.com/en-us/windows/terminal/distributions)
-keeps its settings beside the executable. The pinned
-[FileUtils implementation](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalSettingsModel/FileUtils.cpp#L20-L39)
-requires an unpackaged executable plus adjacent `.portable` marker. The pinned
-[WindowEmperor](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/WindowsTerminal/WindowEmperor.cpp#L309-L358)
-includes the unpackaged executable path in remoting identity, separating a fresh
-path from the installed distribution's running server.
+The native `terminal-proof run` example launches a dedicated Active target and
+drives the real HudSwitch controller and Windows backend. Run it only in a
+serialized interactive desktop session after reviewing the exact fixture and
+command. Native CI compiles it but does not run this visible proof.
 
-This is a fixture precondition, not a public runtime-profile recognition API.
-Before running it, verify the exact official asset's release metadata, complete
-ZIP SHA256, and Microsoft Authenticode signature. Use exclusive task directories,
-reject unsafe archive paths/reparse entries, and create only adjacent synthetic
-settings. The fixture profile selects its explicit command; both the profile and
-profile defaults select `elevate:false` and zero-GUID `connectionType`. Set empty
-`startupActions` and `firstWindowPreference:defaultProfile`; pass the fixture
-command explicitly on the CLI. Never select an ordinary user shell as fallback.
+## Isolated preparation
 
-Portable settings still read external fragments. The pinned
-[loader](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp#L330-L445)
-searches shared fragment directories and app extensions. The proof's read-only
-`sources` guard enumerates those namespaces and rejects unknown ones or discovery
-errors before launch. Disable all observed namespaces and built-in dynamic
-sources in the synthetic settings; repeat discovery afterward and reject changed
-observations. This does not protect against a hostile concurrent configuration
-change and is not a security boundary. No normal settings, fragments, aliases,
-registry entries, running sessions, or installed executables may be changed.
+Use a fresh task directory and an official unpackaged Terminal ZIP. Verify the
+release metadata, full ZIP SHA256 and Microsoft Authenticode signature. The
+measured release 1.24.12741.0 x64 asset 604365806 is 11,656,229 bytes; its SHA256
+is `7aaa8321064c45d5af79205db13deb87f146f644bd8abdfae29f0155d7ce744e`.
+The extracted executable SHA256 is
+`4ad317d9dacedca1e68dcc2405d6d364a20599b646b8205feae829cf18ef4958`.
+Its PE file version 1.24.2610.01001 differs from the release/package version.
+Reject unsafe archive paths/reparse entries and record exact prepared-file hashes.
 
-The foreground monitor installs an out-of-context foreground WinEvent hook on a
-short-lived message-pumping thread before creation. It records intermediate
-foreground HWNDs, rather than relying only on the final foreground after launch.
-Stop/join it after the bounded launch observation. Only the probe owns this
-observer; the production backend retains the caller-owned event-loop contract.
+Use full native paths consistently: the current identity check compares
+executable paths without resolving short-name aliases. Microsoft's
+[portable-mode contract](https://learn.microsoft.com/en-us/windows/terminal/distributions)
+requires an unpackaged executable with adjacent `.portable` marker and settings.
+The pinned [FileUtils implementation](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalSettingsModel/FileUtils.cpp#L20-L39)
+and [WindowEmperor remoting identity](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/WindowsTerminal/WindowEmperor.cpp#L309-L358)
+explain why a fresh portable path isolates settings and running-server selection.
+This is a fixture precondition, not a runtime profile-recognition API.
 
-Portable rendering evidence would apply to that exact same-version fixture.
-It cannot establish installed Stable fragment-cache recognition, Preview behavior,
-or complete ordinary-profile cloning. Those require separate evidence.
+Prepare only synthetic settings: fresh nonce/profile GUID, explicit fixture
+command, `elevate:false`, zero-GUID ConPTY `connectionType`, empty startup actions
+and `firstWindowPreference:defaultProfile`. Pass the fixture command explicitly
+on the CLI. Terminal [clears invalid profile-default identity/command keys](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp#L849-L857),
+so a default command line alone is not a safe fallback guarantee. Never select
+an ordinary shell as fallback or trust a running installation's fragment cache.
 
-Terminal can normalize and rewrite its own synthetic settings, including adding
-inbox profiles. Its pinned [loader](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp#L849-L857)
-clears commandline/name/source/GUID from profile defaults. A default command line
-is not a launch-safety guarantee; use the explicit CLI fixture command with known
-non-elevated ConPTY defaults. Preserve normalized bytes as evidence; reusing the
-fixture requires reviewing/restoring only owned configuration and stale markers.
+Portable settings still [load shared fragments and app extensions](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp#L330-L445).
+Read-only `sources` discovery must succeed and match known disabled namespaces;
+unknown namespaces/errors refuse launch. Disable observed and built-in dynamic
+sources in synthetic settings. Recheck discovery afterward. This is not a
+security boundary against hostile concurrent namespace/configuration changes.
+Baseline external settings/fragment bytes and unrelated Terminal witnesses;
+never edit normal profiles, main settings, installed executables or sessions.
 
-After preparing the reviewed isolated configuration, build the native example:
+## Run and evidence
+
+Build with native MSVC Rust using a native Windows target directory:
 
 ```powershell
 cargo build -p terminalhud-windows-terminal --example terminal-proof --locked
-terminal-proof diagnose <absolute-task-directory> 4
-# Separately reviewed comparison only:
-terminal-proof diagnose <absolute-task-directory> 8
-```
-
-The final argument allows only `4` (`SW_SHOWNOACTIVATE`) or `8` (`SW_SHOWNA`),
-which are distinct [documented show commands](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow).
-This is a diagnostic-only example, separate from the guarded normal launch APIs.
-It shows the owned blue primary-monitor sink and dedicated test Terminal, records
-numeric/classified foreground events, then requests nonce fixture exit. It has
-no backend construction, styles, state transitions, renderer checks or input.
-Unknown namespaces, unsafe startup settings and stale protocol markers refuse
-execution. Native CI compiles it but never runs this desktop experiment.
-
-
-## Foreground setup and observation phases
-
-The diagnostic requires an explicit show command; omission never selects a
-comparison implicitly. Before creating Terminal it records its selected mode,
-validated setup, sink creation, the sink foreground-request result and actual
-foreground readiness. It verifies the sink's unique class, owning process/thread
-and live thread before one ordinary `SetForegroundWindow` request. If the owned
-sink does not become foreground within 3 seconds, it logs `prelaunch-refused`
-with the observed HWND and does not create Terminal. No retries, global input,
-`AttachThreadInput`, focus-lock changes or focus restoration are used.
-
-The observation hook begins only after that setup. A target foreground event
-remains a target-activation failure even if a later event restores the sink.
-Any unrelated foreground event or unrelated final foreground invalidates the
-observation; when target activation and unrelated activity both occur, both are
-reported. Only a sink-only trace with final sink can report preserved foreground.
-
-The sink owns its shutdown: Drop signals a private channel and joins its thread;
-that thread verifies exact process/thread/class before destroying its window.
-It sends no close message to a stored HWND. Already-closed or mismatched windows
-are reported and left untouched. This reduces stale-handle risk; separate Win32
-identity queries are not an atomic lifetime guarantee. Namespace and preexisting
-Terminal witness checks run after sink teardown even on a prelaunch refusal.
-
-The single fullscreen `8` diagnostic with these phases was subsequently reviewed
-and executed. It confirmed target activation; see [the feasibility evidence](windows-terminal-feasibility.md).
-Any next control requires its own reviewed arguments, fresh preflight and desktop
-slot authorization; the diagnostic is not a product launch bypass.
-
-
-## Explicit windowed comparison control
-
-The diagnostic-only trailing `--windowed-control` flag is accepted only with
-show command `8`, and rejects extra/unknown arguments before setup. It removes
-exactly `--fullscreen` from the known launch-plan prefix before appending the
-same explicit fixture executable/`--shell`/task/nonce arguments. Omitting the
-flag keeps the existing fullscreen diagnostic. Production adapter APIs and
-launch-plan construction do not use this comparison option.
-
-```powershell
-terminal-proof diagnose <absolute-task-directory> 8 --windowed-control
-```
-
-Creation and result logs explicitly label `WindowedControl`. This compares the
-fullscreen startup hypothesis only; windowed foreground preservation cannot
-establish the required initial fullscreen Passive presentation. Before a separate
-reviewed/serialized run, archive the previous task's normalized settings, generated
-state, markers and logs byte-for-byte; verify exact observed hashes and no owned
-processes; restore only its reviewed synthetic settings and remove only the
-explicitly archived task-generated state/nonce markers. Preserve all global
-configuration and recheck namespaces, binary hashes and external baselines.
-
-
-The reviewed single windowed show8 control also activated the exact target;
-[the trace](../tests/terminalhud-tests/windows-terminal/evidence/windowed-show8.txt)
-contains its explicit mode label, successful sink setup and strict classification.
-Both controls remain diagnostic-only failures; production Passive launch stays
-unsupported before process creation. The task's original/normalized settings,
-state, markers, logs and each fixture executable are archived separately.
-
-## Normal Active acceptance path
-
-The user selected Active for every fresh HUD target. The `run` proof uses the
-normal adapter's `start_with_command` Active entrypoint, not a diagnostic show
-flag override. It verifies the fresh HWND/executable/retained owner ancestry and
-nonce/profile/session before constructing the backend's delegated-launch receipt.
-A real HudSwitch controller captures the owned sink foreground before acquisition,
-then drives the existing Windows backend. No production policy is implemented in
-this probe, and an explicit Passive creation request remains unsupported.
-
-```powershell
 terminal-proof run <absolute-task-directory>
 ```
 
-This command is for a separately reviewed and authorized desktop session. It
-checks primary fullscreen bounds, Active foreground/topmost presentation, Passive
-focus restoration/click-through, Hidden restoration and same-session survival.
-It attempts exactly one physical mouse click only after the hit-test and owner
-checks identify its own Passive sink; no keyboard or global shortcut is injected.
-A failed focus, identity, layering or renderer check stops the sequence and
-attempts controller restoration plus explicit nonce cleanup.
+The only other operations are `preview <absolute-terminal-exe>`, which creates
+a fresh preview without installing it, and the internal nonce shell fixture.
+The probe uses normal `start_with_command` Active creation. It verifies fresh
+HWND/executable/retained ancestry and nonce/profile/session before constructing
+a delegated backend receipt. The controller captures the owned blue sink's
+foreground before launch. One ordinary identity-checked sink foreground request
+is allowed during setup; failure is a prelaunch refusal, without focus bypasses.
 
-The synthetic renderer check reads only points covered by the verified Terminal
-or owned blue sink. It expects black background at 35% opacity over RGB
-(40,160,220) to produce approximately (26,104,143) when Active, and the unchanged
-blue background when Passive, allowing six levels per color channel. It also
-requires at least ten sampled near-white fixture text/block pixels (all channels
-at least 245). These are bounded pixel observations, not a general color-management
-or complete glyph-rendering guarantee; unexpected composition fails the proof.
-No whole-desktop screenshot or unrelated window content is saved.
+The sequence checks primary fullscreen bounds, Active focus/topmost, Passive
+focus restoration/click-through, Hidden memory and same-session survival. Exactly
+one physical mouse click is permitted only after hit-testing/PID verification
+identifies the owned Passive sink. No keyboard/global shortcuts are injected.
+Pixel reads cover only the verified Terminal/owned sink; no desktop screenshot
+or unrelated window content is saved. Black background at 35% over RGB
+(40,160,220) should approximate (26,104,143); Passive should preserve the blue.
+The fixture predicate allows six levels per channel and requires ten near-white
+samples (all channels at least 245). These are bounded composition observations,
+not complete renderer, color-management or glyph certification.
 
-Quit must restore owned style/visibility changes while leaving the exact session
-alive, before the fixture is explicitly asked to exit. The outer runner must
-retain a deadline, guard all exact task hashes/markers/processes, and compare
-external configuration and existing-Terminal witnesses. Old show-flag/windowed
-controls remain only until the separately assigned cleanup removes them from
-the final probe; historical raw traces remain evidence, not product launch paths.
+Any identity, focus, layering or rendering failure stops the sequence and
+attempts controller restoration plus nonce cleanup. Quit must restore owned
+style/visibility changes while the exact session remains alive, before explicit
+fixture exit. The sink shuts down through its owning thread, which validates
+PID/thread/unique class; it sends no close message to a saved HWND. Separate
+Win32 identity queries cannot make lifetime changes atomic. Namespace/witness
+checks run after sink teardown even when setup or proof fails.
+
+The outer runner needs a deadline, exact task-hash/process/marker preflight and
+postrun external-baseline comparison. Terminal may normalize synthetic settings
+and generate its own state. Before reusing a fixture, archive those exact bytes,
+markers, logs and old binary; require the observed hashes and no owned processes,
+then restore only the reviewed synthetic settings and remove only explicitly
+archived task-generated state/nonce markers. Record each new compiled fixture
+hash. Preserve all global configuration throughout.
+
+Portable results cover only that fixture/version. Installed fragment reload,
+Preview and complete ordinary-profile cloning remain separate validation work.
+See [startup findings](windows-terminal-feasibility.md) for the accepted rationale.

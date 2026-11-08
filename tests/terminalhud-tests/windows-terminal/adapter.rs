@@ -3,16 +3,14 @@ use terminalhud_windows_terminal::*;
 mod active_render;
 #[path = "cases/correlation.rs"]
 mod correlation;
-#[path = "cases/foreground.rs"]
-mod foreground;
 #[path = "cases/identity.rs"]
 mod identity;
 #[path = "cases/launch.rs"]
 mod launch;
 #[path = "cases/profiles.rs"]
 mod profiles;
-#[path = "cases/startup_control.rs"]
-mod startup_control;
+#[path = "cases/underlay.rs"]
+mod underlay;
 
 fn guid(suffix: u8) -> Guid {
     Guid::parse(&format!(

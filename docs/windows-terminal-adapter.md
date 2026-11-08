@@ -30,7 +30,7 @@ lifetime changes atomic. The [controlled portable proof](windows-terminal-proof.
 uses isolated synthetic settings; `preview` only writes a fresh task directory.
 
 The [native feasibility report](windows-terminal-feasibility.md) records the
-startup blocker and remaining unproven acceptance items.
+startup findings behind the Active-creation decision and the limits of that evidence.
 
 ## Installed-version source expectations
 
@@ -38,11 +38,6 @@ These observations use Microsoft Terminal v1.24.12741.0, commit
 `7ff11ee107c984e236960ec948b450ccbc10187b`. They are static source expectations,
 not native GUI/input/rendering evidence:
 
-- [WindowEmperor](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/WindowsTerminal/WindowEmperor.cpp)
-  forwards the startup show command during command-line handoff.
-- [AppHost](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/WindowsTerminal/AppHost.cpp#L1170-L1207)
-  uses that command and skips its foreground request for `SW_SHOWNOACTIVATE`.
-  Actual foreground monitoring before/during creation is still required.
 - [GetProfileForArgs](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalSettingsModel/CascadiaSettings.cpp#L735-L780)
   can fall back from an unknown requested profile. With an explicit command line
   it may select a command-matched profile or `ProfileDefaults`; otherwise it
@@ -54,7 +49,7 @@ not native GUI/input/rendering evidence:
   watches the main settings filename. A fragment on disk is insufficient reload
   evidence; do not write main settings or restart unrelated sessions to force it.
 
-Native proof must separately establish fullscreen bounds, transient focus safety,
+Native proof must separately establish fullscreen bounds, Active creation and focus restoration,
 Active/Passive/Hidden observations, actual click routing, background transparency
 with opaque text, session survival, and exact owned-file/session cleanup. Existing
 Terminal DirectComposition/layered-window renderer compatibility is unproven.

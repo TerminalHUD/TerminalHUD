@@ -1,4 +1,0 @@
-
-Terminal proof: Invalid("launch parent PID was reused")
-
-EXIT=1

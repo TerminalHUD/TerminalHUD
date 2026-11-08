@@ -73,24 +73,3 @@ fn normal_passive_entrypoints_refuse_before_path_checks_or_spawn() {
         Err(NativeError::Unsupported(_))
     ));
 }
-
-#[cfg(windows)]
-#[path = "../proof/windows/show.rs"]
-mod diagnostic_show;
-#[cfg(windows)]
-#[test]
-fn diagnostic_argument_mapping_allows_only_the_two_reviewed_show_commands() {
-    use windows_sys::Win32::UI::WindowsAndMessaging::{SW_SHOWNA, SW_SHOWNOACTIVATE};
-    assert_eq!(
-        diagnostic_show::Show::parse(Some("4")).unwrap().value(),
-        SW_SHOWNOACTIVATE as u16
-    );
-    assert_eq!(
-        diagnostic_show::Show::parse(Some("8")).unwrap().value(),
-        SW_SHOWNA as u16
-    );
-    assert!(diagnostic_show::Show::parse(None).is_err());
-    for value in ["0", "1", "hide", "active", "", "4;8"] {
-        assert!(diagnostic_show::Show::parse(Some(value)).is_err());
-    }
-}

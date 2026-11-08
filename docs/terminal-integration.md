@@ -115,8 +115,9 @@ profile GUID may silently fall back to ordinary defaults, including inherited
 launch behavior; native launch must remain blocked until that ambiguity is
 resolved without modifying the user's main settings.
 
-The [native feasibility report](windows-terminal-feasibility.md) records a
-transient foreground activation in the tested portable fullscreen startup path.
-Normal adapter Passive launch now returns `Unsupported` before spawning. The
-launch-only diagnostics do not establish real-Terminal state, input or rendering
-support; those acceptance items remain outstanding.
+The [startup findings](windows-terminal-feasibility.md) explain the accepted
+[Active-creation policy](decisions/0009-active-hud-creation.md). Both tested
+no-activation startup modes activated their dedicated targets; their internal
+cause is unproven. Normal adapter Passive creation returns `Unsupported` before
+spawning. The [Active acceptance proof](windows-terminal-proof.md) separately
+checks real-Terminal transitions, input, rendering and session survival.
