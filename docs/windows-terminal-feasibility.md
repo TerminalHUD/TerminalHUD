@@ -110,3 +110,36 @@ the sink. No owned process remained; the existing-Terminal witness and external
 configuration/fragment hashes stayed unchanged. Exact output marker, state,
 settings, logs and binaries are preserved separately. Focus restoration and the
 unreached acceptance phases remain unproven.
+
+
+## Final-focus clarification and censored Passive capture
+
+The [third Active trace](../tests/terminalhud-tests/windows-terminal/evidence/active-run3.txt)
+used reviewed revision `0bf873412734d743aeada41c7139076f094d9760`, fixture SHA256
+`8ea51fb059194233ba180f9ac980d389f34f2cb4b480307f82a48e3774707da9` and unchanged
+synthetic settings. It confirmed Active bounds/state and the same strict RGB
+result (1,562 white samples). Owner PID 46608/HWND 12324786 and fixture PID 35264
+remained correlated with session `{dffa4a16-4f12-46f7-b10e-e040916a83aa}`.
+
+RequestPassive returned confirmed Passive with the direct API warning retained.
+The new final observation established exact saved sink HWND 31002472/PID
+47080/thread 23252/class identity as foreground, and all unchanged strict native
+Passive state/style/focus assertions passed. The warning therefore did not
+represent an unmet final saved-focus requirement in this run. This required no
+input, permission grant, shortcut or backend behavior change.
+
+Passive pixel capture then exceeded the outer runner's 45-second deadline. The
+runner requested only its nonce fixture's exit; the ongoing sample subsequently
+reported changed target/session identity because that cancellation closed it.
+That identity message is a consequence of cancellation, not independent evidence
+of stale ownership. Passive rendering remains censored/inconclusive, not a
+renderer failure. Physical click, Hidden/session-loop and successful-quit assertion
+phases were unreached; no input occurred. Cleanup left zero owned processes and
+unchanged external Terminal/configuration witnesses.
+
+The old 4,096-point path repeated live identity/hit tests and screen `GetPixel`
+per point; its retry deadline was checked only after a whole scan. A bounded
+owned-region in-memory capture will replace those repeated readbacks while
+preserving exact coordinates, step, color thresholds, renderer settings and the
+45-second outer budget. All run3 artifacts, output marker, normalized settings,
+state, original fixture and manifests were archived before this change.

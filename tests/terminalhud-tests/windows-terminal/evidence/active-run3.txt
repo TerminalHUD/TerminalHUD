@@ -1,0 +1,28 @@
+PHASE sink-foreground-request sink=31002472 before=31002472
+PHASE sink-foreground-result api_return=true observed=31002472
+PHASE sink-foreground-ready sink=31002472
+ACTIVE_BEFORE_LAUNCH foreground=31002472 owned_sink=31002472
+ACTIVE_IDENTITY launcher=46608 owner=46608 hwnd=12324786 shell=35264 session={dffa4a16-4f12-46f7-b10e-e040916a83aa}
+ACTIVE_COMMAND InteractionToggle confirmed Status { availability: Managed, state: Some(Active), target_id: Some(TargetId(1)) } focus_warning=None
+ACTIVE_FOCUS saved_hwnd=31002472 saved_pid=47080 saved_tid=23252 saved_class=TerminalHUD.TER9.Underlay.{da540a5c-2ef4-4a0d-ac9b-ddb989f97e9b} actual_hwnd=12324786 actual_pid=46608 actual_tid=43228
+ACTIVE_STATE Active native confirmed; shell=35264 session={dffa4a16-4f12-46f7-b10e-e040916a83aa}
+ACTIVE_OUTPUT_FLUSHED {"block":{"column":2,"columns":24,"row":2,"rows":4},"foregroundRgb":[255,255,255],"nonce":"{936bea5c-1738-4f1a-8d49-854b8efb63ff}","phase":"output-flushed","profile":"{6d9ec4ff-aaa1-4b43-98f1-35ee8b0c488c}","session":"{dffa4a16-4f12-46f7-b10e-e040916a83aa}","shellPid":35264}; emitted bytes only, not GPU readiness
+ACTIVE_RENDER_BOUNDS display=(0,0,2560,1600) fixture=foreground-white rows2-5 cols2-25; scan step8 top512 unchanged
+ACTIVE_RENDER passive=false expected=[26, 104, 143] tolerance=6 background=[26, 104, 143] opaque_white_samples=1562 brightest_rgb=[255, 255, 255] brightest_point=(168, 8) scan_bounds=(0, 0, 512, 512)
+ACTIVE_COMMAND RequestPassive confirmed Status { availability: Managed, state: Some(Passive), target_id: Some(TargetId(1)) } focus_warning=Some(FocusRefused)
+ACTIVE_FOCUS saved_hwnd=31002472 saved_pid=47080 saved_tid=23252 saved_class=TerminalHUD.TER9.Underlay.{da540a5c-2ef4-4a0d-ac9b-ddb989f97e9b} actual_hwnd=31002472 actual_pid=47080 actual_tid=23252
+ACTIVE_STATE Passive native confirmed; shell=35264 session={dffa4a16-4f12-46f7-b10e-e040916a83aa}
+ACTIVE_OUTPUT_FLUSHED {"block":{"column":2,"columns":24,"row":2,"rows":4},"foregroundRgb":[255,255,255],"nonce":"{936bea5c-1738-4f1a-8d49-854b8efb63ff}","phase":"output-flushed","profile":"{6d9ec4ff-aaa1-4b43-98f1-35ee8b0c488c}","session":"{dffa4a16-4f12-46f7-b10e-e040916a83aa}","shellPid":35264}; emitted bytes only, not GPU readiness
+ACTIVE_RENDER_BOUNDS display=(0,0,2560,1600) fixture=foreground-white rows2-5 cols2-25; scan step8 top512 unchanged
+ACTIVE_CLEANUP exact nonce fixture exited and target closed
+PHASE sink-cleanup: owned window destroyed
+PASS: 1 preexisting Terminal window style/visibility witnesses unchanged
+
+ACTIVE_FOCUS_WARNING FocusRefused; strict state and exact saved-sink foreground assertions PASSED after owned release fallback
+ACTIVE_PROOF_FAILED Active proof target/session identity changed
+Terminal proof: Active proof target/session identity changed
+
+PROOF_EXIT=1 TIMED_OUT=True
+OWNED_REMAINING=0
+RUNNER_EXIT=0
+EXTERNAL_HASH_BASELINES_UNCHANGED
