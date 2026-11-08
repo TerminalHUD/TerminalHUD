@@ -77,6 +77,32 @@ Terminal rewrote only its synthetic settings during initialization; original and
 normalized bytes, markers and preparation/postrun manifests were retained as
 separate task evidence. This is startup-focus evidence, not renderer acceptance.
 
+A separate [windowed show8 control](../tests/terminalhud-tests/windows-terminal/evidence/windowed-show8.txt)
+used the same portable path, profile, nonce, original synthetic settings and
+explicit fixture command, omitting only the launch-plan `--fullscreen` token.
+Its reviewed diagnostic revision was
+`5734c688888b203030181498a43f3306a5148461`; fixture SHA256 was
+`d68cc3ab3474a924c180d006cb04e57377d1f92c6c220f83554fca208b0d66db`.
+The earlier normalized settings/state/markers and fixture bytes were archived,
+and original synthetic settings restored before the control.
+
+```text
+DIAGNOSTIC_CREATE_INTENT Passive STARTF_USESHOWWINDOW showCommand=8 (ShowNa) presentation=WindowedControl
+FOCUS_EVIDENCE before=13439072 sink=13439072 target=15798302 final=15798302 targetSeen=true events=[15798302]
+FOCUS_CLASSIFICATION TargetActivated { observation_invalid: false }
+```
+
+The control also activated its verified Terminal target: PID 35404/HWND
+15798302, fixture PID 47452, session
+`{9f237412-0884-476c-99c4-ab9a7bbfe51b}`. Sink foreground setup succeeded, no
+unrelated foreground event contaminated the observation, and no backend/style
+or input operation followed. Nonce fixture/target/sink cleanup completed with
+zero owned processes remaining. Namespace, preexisting Terminal witness and
+external configuration hash baselines stayed unchanged. Windowed activation
+shows the fullscreen operation is not necessary to reproduce this startup
+failure; neither trace identifies the internal cause. This control supplies no
+fullscreen presentation or renderer acceptance evidence.
+
 Earlier [identity-guard](../tests/terminalhud-tests/windows-terminal/evidence/initial-identity-guard.txt)
 and [foreground-guard](../tests/terminalhud-tests/windows-terminal/evidence/initial-foreground-guard.txt)
 logs record refused attempts, not presentation successes. The first rejected
@@ -106,8 +132,8 @@ ordinary-profile cloning are also unproven. Unreached renderer/controller/input
 probe code was removed; no terminal policy was moved into portable cores.
 
 Follow-up choices require an explicit plan: investigate an upstream startup fix;
-isolate the fullscreen startup operation with a separately reviewed windowed
-diagnostic control; or obtain a product decision to start Absent and create Active on user
+investigate a separately reviewed hidden-start diagnostic before any first
+Passive presentation; or obtain a product decision to start Absent and create Active on user
 request. The last changes current requirements and does not prove Passive launch.
 
 
@@ -123,8 +149,8 @@ The [Win32 contract](https://learn.microsoft.com/en-us/windows/win32/api/winuser
 identifies that missing flag as activating behavior. AppHost's later show handler
 explicitly yields to the dispatcher before ShowWindow. This fullscreen operation
 therefore provides an earlier activation candidate than the late foreground
-request already exempted for show commands 4 and 8. The current evidence does
-not prove which internal operation caused the measured activation.
+request already exempted for show commands 4 and 8. The windowed control above also activated, so this fullscreen operation is not
+necessary to reproduce the failure. Neither trace proves the internal cause.
 
 The diagnostic now logs the owned sink setup and performs one ordinary,
 identity-checked foreground request before starting the Terminal measurement.

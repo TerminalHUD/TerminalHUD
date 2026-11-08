@@ -116,3 +116,11 @@ state, markers and logs byte-for-byte; verify exact observed hashes and no owned
 processes; restore only its reviewed synthetic settings and remove only the
 explicitly archived task-generated state/nonce markers. Preserve all global
 configuration and recheck namespaces, binary hashes and external baselines.
+
+
+The reviewed single windowed show8 control also activated the exact target;
+[the trace](../tests/terminalhud-tests/windows-terminal/evidence/windowed-show8.txt)
+contains its explicit mode label, successful sink setup and strict classification.
+Both controls remain diagnostic-only failures; production Passive launch stays
+unsupported before process creation. The task's original/normalized settings,
+state, markers, logs and each fixture executable are archived separately.
