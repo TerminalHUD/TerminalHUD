@@ -1,3 +1,4 @@
+mod active;
 mod diagnostic;
 mod files;
 mod focus_evidence;
@@ -29,6 +30,7 @@ pub fn run() -> Result<()> {
             Path::new(arguments.get(2).ok_or("missing proof directory")?),
             arguments.get(3).ok_or("missing nonce")?,
         ),
+        Some("run") if arguments.len() == 3 => active::run(Path::new(&arguments[2])),
         Some("diagnose") => {
             let show = show::Show::parse(arguments.get(3).map(String::as_str))?;
             let presentation = startup::Presentation::parse(show.value(), &arguments[4..])?;
@@ -39,7 +41,7 @@ pub fn run() -> Result<()> {
             )
         }
         _ => Err(
-            "usage: terminal-proof preview <installed-terminal-exe> | diagnose <proof-dir> <4|8> [--windowed-control]"
+            "usage: terminal-proof run <proof-dir> | preview <installed-terminal-exe> | diagnose <proof-dir> <4|8> [--windowed-control]"
                 .into(),
         ),
     }

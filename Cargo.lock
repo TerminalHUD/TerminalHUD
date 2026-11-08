@@ -1519,6 +1519,7 @@ name = "terminalhud-windows-terminal"
 version = "0.1.0"
 dependencies = [
  "hudswitch-core",
+ "hudswitch-windows",
  "jsonc-parser",
  "serde_json",
  "terminalhud-core",

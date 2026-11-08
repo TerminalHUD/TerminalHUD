@@ -7,27 +7,12 @@ use std::{
 use terminalhud_windows_terminal::native::fresh_guid;
 use windows_sys::Win32::{Graphics::Gdi::*, System::LibraryLoader::GetModuleHandleW};
 
-unsafe extern "system" fn procedure(
-    hwnd: HWND,
-    message: u32,
-    wparam: WPARAM,
-    lparam: LPARAM,
-) -> LRESULT {
-    match message {
-        WM_DESTROY => {
-            unsafe {
-                PostQuitMessage(0);
-            }
-            0
-        }
-        _ => unsafe { DefWindowProcW(hwnd, message, wparam, lparam) },
-    }
-}
-
 pub(super) fn start() -> Result<Underlay> {
     let name: Vec<_> = format!("TerminalHUD.TER9.Underlay.{}\0", fresh_guid()?)
         .encode_utf16()
         .collect();
+    let clicks = Arc::new(AtomicU32::new(0));
+    let thread_clicks = clicks.clone();
     let class = name[..name.len() - 1].to_vec();
     let thread_class = class.clone();
     let (sender, receiver) = mpsc::sync_channel(1);
@@ -36,7 +21,7 @@ pub(super) fn start() -> Result<Underlay> {
         let instance = GetModuleHandleW(null());
         let brush = CreateSolidBrush(40 | (160 << 8) | (220 << 16));
         let class = WNDCLASSW {
-            lpfnWndProc: Some(procedure),
+            lpfnWndProc: Some(messages::procedure),
             hInstance: instance,
             lpszClassName: name.as_ptr(),
             hbrBackground: brush,
@@ -59,7 +44,7 @@ pub(super) fn start() -> Result<Underlay> {
             null_mut(),
             null_mut(),
             instance,
-            null(),
+            Arc::as_ptr(&thread_clicks).cast(),
         );
         if !hwnd.is_null() {
             ShowWindow(hwnd, SW_SHOW);
@@ -85,6 +70,7 @@ pub(super) fn start() -> Result<Underlay> {
     }
     Ok(Underlay {
         hwnd,
+        clicks,
         identity: Identity {
             process: unsafe { windows_sys::Win32::System::Threading::GetCurrentProcessId() },
             thread: owner_thread,

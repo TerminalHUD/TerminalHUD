@@ -124,3 +124,41 @@ contains its explicit mode label, successful sink setup and strict classificatio
 Both controls remain diagnostic-only failures; production Passive launch stays
 unsupported before process creation. The task's original/normalized settings,
 state, markers, logs and each fixture executable are archived separately.
+
+## Normal Active acceptance path
+
+The user selected Active for every fresh HUD target. The `run` proof uses the
+normal adapter's `start_with_command` Active entrypoint, not a diagnostic show
+flag override. It verifies the fresh HWND/executable/retained owner ancestry and
+nonce/profile/session before constructing the backend's delegated-launch receipt.
+A real HudSwitch controller captures the owned sink foreground before acquisition,
+then drives the existing Windows backend. No production policy is implemented in
+this probe, and an explicit Passive creation request remains unsupported.
+
+```powershell
+terminal-proof run <absolute-task-directory>
+```
+
+This command is for a separately reviewed and authorized desktop session. It
+checks primary fullscreen bounds, Active foreground/topmost presentation, Passive
+focus restoration/click-through, Hidden restoration and same-session survival.
+It attempts exactly one physical mouse click only after the hit-test and owner
+checks identify its own Passive sink; no keyboard or global shortcut is injected.
+A failed focus, identity, layering or renderer check stops the sequence and
+attempts controller restoration plus explicit nonce cleanup.
+
+The synthetic renderer check reads only points covered by the verified Terminal
+or owned blue sink. It expects black background at 35% opacity over RGB
+(40,160,220) to produce approximately (26,104,143) when Active, and the unchanged
+blue background when Passive, allowing six levels per color channel. It also
+requires at least ten sampled near-white fixture text/block pixels (all channels
+at least 245). These are bounded pixel observations, not a general color-management
+or complete glyph-rendering guarantee; unexpected composition fails the proof.
+No whole-desktop screenshot or unrelated window content is saved.
+
+Quit must restore owned style/visibility changes while leaving the exact session
+alive, before the fixture is explicitly asked to exit. The outer runner must
+retain a deadline, guard all exact task hashes/markers/processes, and compare
+external configuration and existing-Terminal witnesses. Old show-flag/windowed
+controls remain only until the separately assigned cleanup removes them from
+the final probe; historical raw traces remain evidence, not product launch paths.

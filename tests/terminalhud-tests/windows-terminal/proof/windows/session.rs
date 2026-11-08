@@ -1,6 +1,7 @@
 //! Only the nonce-scoped fixture session is asked to exit, never a Terminal PID.
 mod handshake;
 use super::{Result, files::write_new, setup::Setup};
+pub(super) use handshake::read as read_handshake;
 use std::os::windows::io::{AsRawHandle, OwnedHandle};
 use std::path::PathBuf;
 use terminalhud_windows_terminal::SessionProof;

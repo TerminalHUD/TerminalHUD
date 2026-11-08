@@ -1,4 +1,6 @@
 use terminalhud_windows_terminal::*;
+#[path = "cases/active_render.rs"]
+mod active_render;
 #[path = "cases/correlation.rs"]
 mod correlation;
 #[path = "cases/foreground.rs"]

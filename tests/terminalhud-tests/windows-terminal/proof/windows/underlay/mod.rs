@@ -1,14 +1,23 @@
 //! An owned primary-monitor focus sink; never a normal user window.
 mod identity;
+mod messages;
 mod run;
 mod window;
 use super::Result;
 use identity::Identity;
-use std::{sync::mpsc, thread::JoinHandle};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicU32, Ordering},
+        mpsc,
+    },
+    thread::JoinHandle,
+};
 use windows_sys::Win32::{Foundation::*, UI::WindowsAndMessaging::*};
 
 pub(super) struct Underlay {
     hwnd: isize,
+    clicks: Arc<AtomicU32>,
     identity: Identity,
     stop: mpsc::Sender<()>,
     thread: Option<JoinHandle<()>>,
@@ -19,6 +28,9 @@ impl Underlay {
     }
     pub(super) fn hwnd(&self) -> HWND {
         self.hwnd as HWND
+    }
+    pub(super) fn clicks(&self) -> u32 {
+        self.clicks.load(Ordering::Relaxed)
     }
     pub(super) fn ensure_owned(&self) -> Result<()> {
         if self.thread.as_ref().is_none_or(JoinHandle::is_finished)
