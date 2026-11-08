@@ -10,7 +10,9 @@ Construct `WindowsBackend<L>` on the caller's authoritative controller/UI thread
 It is thread-confined, starts no permanent event loop, and does not install a
 competing input/message pump. The application owns event dispatch: platform
 notifications must be queued and delivered with the current core `TargetId`.
-Automatic WinEvent monitoring and global hotkeys are not implemented here.
+Automatic WinEvent monitoring is not implemented here. The optional
+[thread-owned hotkey API](windows-hotkeys.md) registers explicit bindings for this
+same caller-owned message pump; it contains no product bindings or dispatch loop.
 
 The injected `Launcher` receives Active or Passive creation intent and returns a
 `LaunchedWindow`. Passive launch must be nonactivating from creation onward;
