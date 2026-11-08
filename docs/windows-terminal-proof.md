@@ -105,3 +105,15 @@ three-second bounded sampling retry and strict predicate remain unchanged.
 Failures report display/scan bounds and one actual sampled pixel selected by
 maximum minimum RGB channel, including its coordinate, to distinguish palette,
 geometry and attenuation without combining channels from different pixels.
+
+
+A transition's saved-focus API warning is logged alongside the completed
+controller outcome and actual foreground identity. It does not bypass any
+native assertion: the unchanged expected state, ownership, visibility/style and
+exact saved-sink foreground checks run first. If the backend's existing owned
+hide/show release fallback has restored that exact sink and state, the warning
+remains prominent while later phases proceed. A real sink/state mismatch still
+fails. Quit likewise verifies original owned style/visibility and same live
+session before accepting a warning, and additionally requires exact sink
+foreground when a quit warning occurs. This is proof reporting; no backend
+focus behavior, permission grant, key binding or input workaround is changed.

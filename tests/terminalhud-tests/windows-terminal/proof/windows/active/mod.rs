@@ -1,3 +1,4 @@
+mod focus_log;
 mod identity;
 mod input;
 mod input_recovery;
@@ -8,6 +9,7 @@ mod render;
 mod render_evidence;
 mod render_sample;
 mod session;
+mod shutdown;
 mod states;
 use super::{
     Result, foreground_setup, setup::Setup, sources, underlay::Underlay, witness::Witness,

@@ -1,6 +1,6 @@
 use super::{
     super::{Result, underlay::Underlay},
-    identity,
+    focus_log, identity,
     launch::{Launched, Shared},
 };
 use hudswitch_core::{Controller, Event, State};
@@ -59,28 +59,27 @@ pub(super) fn check(target: &Launched, sink: &Underlay, state: State) -> Result<
     );
     Ok(())
 }
-pub(super) fn quit_restored(target: &Launched) -> Result<()> {
-    identity::ensure(target)?;
-    let style = unsafe { GetWindowLongPtrW(target.hwnd as _, GWL_EXSTYLE) };
-    let visible = unsafe { IsWindowVisible(target.hwnd as _) } != 0;
-    let mask = (WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_LAYERED) as isize;
-    if style & mask != target.original_style & mask || visible != target.original_visible {
-        return Err("quit did not restore original owned style/visibility".into());
-    }
-    println!("ACTIVE_PROOF quit restored owned styles/visibility and left exact session alive");
-    Ok(())
-}
-
 pub(super) fn transition<L: hudswitch_windows::Launcher>(
     controller: &mut Controller<WindowsBackend<L>>,
     event: Event,
+    expected: State,
+    shared: &Shared,
+    sink: &Underlay,
 ) -> Result<()> {
     let outcome = controller
         .dispatch(event)
         .map_err(|error| format!("controller transition failed: {error:?}"))?;
+    println!(
+        "ACTIVE_COMMAND {event:?} confirmed {:?} focus_warning={:?}",
+        outcome.status, outcome.focus_restore_error
+    );
+    focus_log::snapshot(sink)?;
+    require_state(controller, expected)?;
+    inspect(shared, |target| check(target, sink, expected))?;
     if let Some(warning) = outcome.focus_restore_error {
-        return Err(format!("foreground restore warning: {warning:?}").into());
+        eprintln!(
+            "ACTIVE_FOCUS_WARNING {warning:?}; strict state and exact saved-sink foreground assertions PASSED after owned release fallback"
+        );
     }
-    println!("ACTIVE_COMMAND {event:?} confirmed {:?}", outcome.status);
     Ok(())
 }

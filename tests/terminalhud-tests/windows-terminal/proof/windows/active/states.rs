@@ -2,8 +2,9 @@ use super::{
     super::{Result, observe, setup::Setup, underlay::Underlay},
     input,
     launch::{AdapterLauncher, Shared},
-    observations::{check, inspect, quit_restored, require_state, transition},
+    observations::{inspect, transition},
     render,
+    shutdown::quit,
 };
 use hudswitch_core::{Controller, Event, State, VisibleState};
 use hudswitch_windows::WindowsBackend;
@@ -19,52 +20,66 @@ pub(super) fn run(setup: &Setup, sink: &Underlay) -> Result<()> {
         sink.hwnd() as isize
     );
     let result = (|| -> Result<()> {
-        transition(&mut controller, Event::InteractionToggle)?;
-        require_state(&controller, State::Active)?;
-        inspect(&shared, |t| {
-            check(t, sink, State::Active)?;
-            render::verify(t, sink, false)
+        transition(
+            &mut controller,
+            Event::InteractionToggle,
+            State::Active,
+            &shared,
+            sink,
+        )?;
+        inspect(&shared, |target| render::verify(target, sink, false))?;
+        transition(
+            &mut controller,
+            Event::RequestPassive,
+            State::Passive,
+            &shared,
+            sink,
+        )?;
+        inspect(&shared, |target| {
+            render::verify(target, sink, true)?;
+            input::click_sink(target, sink)
         })?;
-        transition(&mut controller, Event::RequestPassive)?;
-        require_state(&controller, State::Passive)?;
-        inspect(&shared, |t| {
-            check(t, sink, State::Passive)?;
-            render::verify(t, sink, true)?;
-            input::click_sink(t, sink)
-        })?;
-        transition(&mut controller, Event::VisibilityToggle)?;
-        require_state(
-            &controller,
+        transition(
+            &mut controller,
+            Event::VisibilityToggle,
             State::Hidden {
                 return_state: VisibleState::Passive,
             },
+            &shared,
+            sink,
         )?;
-        inspect(&shared, |t| {
-            check(
-                t,
-                sink,
-                State::Hidden {
-                    return_state: VisibleState::Passive,
-                },
-            )
-        })?;
-        transition(&mut controller, Event::VisibilityToggle)?;
-        require_state(&controller, State::Passive)?;
-        inspect(&shared, |t| check(t, sink, State::Passive))?;
+        transition(
+            &mut controller,
+            Event::VisibilityToggle,
+            State::Passive,
+            &shared,
+            sink,
+        )?;
         println!("ACTIVE_PROOF same session survived Passive/Hidden/Passive");
-        transition(&mut controller, Event::InteractionToggle)?;
-        require_state(&controller, State::Active)?;
-        transition(&mut controller, Event::VisibilityToggle)?;
-        require_state(
-            &controller,
+        transition(
+            &mut controller,
+            Event::InteractionToggle,
+            State::Active,
+            &shared,
+            sink,
+        )?;
+        transition(
+            &mut controller,
+            Event::VisibilityToggle,
             State::Hidden {
                 return_state: VisibleState::Active,
             },
+            &shared,
+            sink,
         )?;
-        transition(&mut controller, Event::VisibilityToggle)?;
-        require_state(&controller, State::Active)?;
-        transition(&mut controller, Event::Quit)?;
-        inspect(&shared, quit_restored)?;
+        transition(
+            &mut controller,
+            Event::VisibilityToggle,
+            State::Active,
+            &shared,
+            sink,
+        )?;
+        quit(&mut controller, &shared, sink)?;
         Ok(())
     })();
     if let Err(ref error) = result {
