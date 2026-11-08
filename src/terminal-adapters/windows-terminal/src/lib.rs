@@ -1,6 +1,12 @@
-//! Dedicated Windows Terminal integration behind TerminalHUD adapter contracts.
-//!
-//! Terminal-specific launch, identity, and presentation behavior belongs here,
-//! rather than in HudSwitch or the portable product core.
-
-#![cfg(windows)]
+//! Read-only Windows Terminal profile previews and isolated launch plans.
+//! The application composition layer selects and bridges its window backend.
+mod error;
+mod guid;
+mod launch;
+#[cfg(windows)]
+pub mod native;
+mod profiles;
+pub use error::Error;
+pub use guid::Guid;
+pub use launch::{LaunchIdentity, LaunchPlan, SessionProof, WindowCandidate, correlate};
+pub use profiles::{Catalog, FragmentPreview, Profile};

@@ -1,0 +1,25 @@
+PHASE diagnostic-start showCommand=8 presentation=WindowedControl
+PHASE setup-validated
+PHASE sink-create
+PHASE sink-foreground-request sink=13439072 before=13439072
+PHASE sink-foreground-result api_return=true observed=13439072
+PHASE sink-foreground-ready sink=13439072
+PHASE launch-observation-start
+DIAGNOSTIC_CREATE_INTENT Passive STARTF_USESHOWWINDOW showCommand=8 (ShowNa) presentation=WindowedControl
+Terminal PID=35404 HWND=15798302 fixture PID=47452 WT_SESSION={9f237412-0884-476c-99c4-ab9a7bbfe51b}
+FOCUS_EVIDENCE before=13439072 sink=13439072 target=15798302 final=15798302 targetSeen=true events=[15798302]
+FOCUS_CLASSIFICATION TargetActivated { observation_invalid: false }
+CLASSIFIED_FOREGROUND_EVENTS ["15798302:own-target"]
+PHASE fixture-exit-request
+PASS: diagnostic nonce session exited and dedicated target closed; no backend or input used
+DIAGNOSTIC_RESULT presentation=WindowedControl evidence=TargetActivated { observation_invalid: false }
+PHASE sink-cleanup: owned window destroyed
+PHASE namespace-check unchanged
+PASS: 1 preexisting Terminal window style/visibility witnesses unchanged
+
+Terminal proof: diagnostic confirmed target activation; unrelated_observation_invalid=false; not managing target
+
+DIAGNOSTIC_EXIT=1 TIMED_OUT=False
+OWNED_REMAINING=0
+RUNNER_EXIT=0
+EXTERNAL_HASH_BASELINES_UNCHANGED

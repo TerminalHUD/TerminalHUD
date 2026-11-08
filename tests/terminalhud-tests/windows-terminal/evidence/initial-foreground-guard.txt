@@ -1,0 +1,5 @@
+Terminal PID=43468 HWND=26086852 fixture PID=27452 WT_SESSION={a5ea6274-e20b-4483-8369-f0ba93bd7079}
+
+Terminal proof: Passive creation changed foreground (including transient events); no backend acquisition performed
+
+EXIT=1
