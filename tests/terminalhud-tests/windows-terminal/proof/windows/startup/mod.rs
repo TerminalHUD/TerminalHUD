@@ -1,6 +1,8 @@
 //! Diagnostic-only process creation, isolated from guarded normal adapter APIs.
 mod command;
+mod presentation;
 use super::{Result, setup::Setup, show::Show};
+pub(super) use presentation::Presentation;
 use std::{
     os::windows::io::{FromRawHandle, OwnedHandle},
     ptr::null,
@@ -8,10 +10,15 @@ use std::{
 use terminalhud_windows_terminal::LaunchPlan;
 use windows_sys::Win32::{Foundation::GetLastError, System::Threading::*};
 
-pub(super) fn start(setup: &Setup, plan: &LaunchPlan, show: Show) -> Result<OwnedHandle> {
+pub(super) fn start(
+    setup: &Setup,
+    plan: &LaunchPlan,
+    show: Show,
+    presentation: Presentation,
+) -> Result<OwnedHandle> {
     let application = command::wide(setup.terminal.as_os_str())?;
     let cwd = command::wide(setup.task.as_os_str())?;
-    let mut line = command::arguments(plan, &setup.terminal, &setup.command)?;
+    let mut line = command::arguments(plan, &setup.terminal, &setup.command, presentation)?;
     let startup = STARTUPINFOW {
         cb: std::mem::size_of::<STARTUPINFOW>() as u32,
         dwFlags: STARTF_USESHOWWINDOW,
@@ -20,7 +27,7 @@ pub(super) fn start(setup: &Setup, plan: &LaunchPlan, show: Show) -> Result<Owne
     };
     let mut process = unsafe { std::mem::zeroed::<PROCESS_INFORMATION>() };
     println!(
-        "DIAGNOSTIC_CREATE_INTENT Passive STARTF_USESHOWWINDOW showCommand={} ({show:?})",
+        "DIAGNOSTIC_CREATE_INTENT Passive STARTF_USESHOWWINDOW showCommand={} ({show:?}) presentation={presentation:?}",
         show.value()
     );
     if unsafe {

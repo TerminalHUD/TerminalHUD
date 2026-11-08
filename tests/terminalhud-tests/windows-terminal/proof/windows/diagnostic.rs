@@ -1,12 +1,15 @@
 //! Launch/trace/cleanup only. No backend acquisition, style changes or input.
 use super::{
     Result, focus_evidence::Evidence, foreground_setup, launch, observe, setup::Setup, show::Show,
-    sources, underlay::Underlay, witness::Witness,
+    sources, startup::Presentation, underlay::Underlay, witness::Witness,
 };
 use std::path::Path;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
-pub(super) fn run(task: &Path, show: Show) -> Result<()> {
-    println!("PHASE diagnostic-start showCommand={}", show.value());
+pub(super) fn run(task: &Path, show: Show, presentation: Presentation) -> Result<()> {
+    println!(
+        "PHASE diagnostic-start showCommand={} presentation={presentation:?}",
+        show.value()
+    );
     let setup = Setup::load(task)?;
     println!("PHASE setup-validated");
     let sources_before = sources::check()?;
@@ -18,7 +21,7 @@ pub(super) fn run(task: &Path, show: Show) -> Result<()> {
         println!("PHASE sink-create");
         let sink = Underlay::start()?;
         foreground_setup::prepare(&sink)?;
-        trace_session(&setup, &sink, show)
+        trace_session(&setup, &sink, show, presentation)
     })(); // Drop/join the owned sink before checking external witnesses.
     let namespaces = sources::check().and_then(|after| {
         if after == sources_before {
@@ -38,15 +41,24 @@ pub(super) fn run(task: &Path, show: Show) -> Result<()> {
     namespaces?;
     witnesses
 }
-fn trace_session(setup: &Setup, sink: &Underlay, show: Show) -> Result<()> {
+fn trace_session(
+    setup: &Setup,
+    sink: &Underlay,
+    show: Show,
+    presentation: Presentation,
+) -> Result<()> {
     println!("PHASE launch-observation-start");
-    let launched = launch::verified(setup, sink, show)?;
+    let launched = launch::verified(setup, sink, show, presentation)?;
     let hwnd = launched.window.window_handle();
     println!("PHASE fixture-exit-request");
     launched.session.request_exit()?;
     observe::wait(|| unsafe { IsWindow(hwnd as _) } == 0 && !launched.session.alive())?;
     println!(
         "PASS: diagnostic nonce session exited and dedicated target closed; no backend or input used"
+    );
+    println!(
+        "DIAGNOSTIC_RESULT presentation={presentation:?} evidence={:?}",
+        launched.evidence
     );
     match launched.evidence {
         Evidence::TargetActivated { observation_invalid } => Err(format!(
@@ -56,7 +68,7 @@ fn trace_session(setup: &Setup, sink: &Underlay, show: Show) -> Result<()> {
             "diagnostic observation invalid: non-sink foreground observed; not attributed to Terminal".into()
         ),
         Evidence::Preserved => {
-            println!("PASS: diagnostic launch preserved foreground throughout observation");
+            println!("PASS: diagnostic {presentation:?} preserved foreground throughout observation; not product acceptance");
             Ok(())
         }
     }

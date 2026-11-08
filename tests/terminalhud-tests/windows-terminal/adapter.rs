@@ -9,6 +9,8 @@ mod identity;
 mod launch;
 #[path = "cases/profiles.rs"]
 mod profiles;
+#[path = "cases/startup_control.rs"]
+mod startup_control;
 
 fn guid(suffix: u8) -> Guid {
     Guid::parse(&format!(

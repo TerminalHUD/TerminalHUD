@@ -35,6 +35,7 @@ pub(super) fn arguments(
     plan: &terminalhud_windows_terminal::LaunchPlan,
     executable: &std::path::Path,
     command: &[String],
+    presentation: super::Presentation,
 ) -> Result<Vec<u16>, NativeError> {
     if command.iter().any(|argument| argument.contains(';')) {
         return Err(NativeError::Invalid(
@@ -42,7 +43,7 @@ pub(super) fn arguments(
         ));
     }
     let arguments = std::iter::once(executable.to_string_lossy().into_owned())
-        .chain(plan.arguments())
+        .chain(presentation.arguments(plan).map_err(NativeError::Invalid)?)
         .chain(command.iter().cloned())
         .map(|argument| quote(&argument))
         .collect::<Vec<_>>()

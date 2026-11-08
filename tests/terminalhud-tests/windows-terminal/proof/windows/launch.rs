@@ -5,6 +5,7 @@ use super::{
     session::Session,
     setup::Setup,
     show::Show,
+    startup::Presentation,
     underlay::Underlay,
 };
 use hudswitch_core::VisibleState;
@@ -20,7 +21,12 @@ pub(super) struct Launched {
     pub session: Session,
     pub evidence: Evidence,
 }
-pub(super) fn verified(setup: &Setup, sink: &Underlay, show: Show) -> Result<Launched> {
+pub(super) fn verified(
+    setup: &Setup,
+    sink: &Underlay,
+    show: Show,
+    presentation: Presentation,
+) -> Result<Launched> {
     if unsafe { GetForegroundWindow() } != sink.hwnd() {
         return Err(
             "owned sink is not foreground; refusing launch instead of bypassing focus policy"
@@ -41,7 +47,10 @@ pub(super) fn verified(setup: &Setup, sink: &Underlay, show: Show) -> Result<Lau
         intent: VisibleState::Passive,
         primary_origin: (0, 0),
     };
-    let mut session = Session::new(setup, super::startup::start(setup, &plan, show)?);
+    let mut session = Session::new(
+        setup,
+        super::startup::start(setup, &plan, show, presentation)?,
+    );
     let proof = session.handshake()?;
     let deadline = Instant::now() + Duration::from_secs(5);
     let verified = loop {

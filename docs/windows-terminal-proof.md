@@ -93,3 +93,26 @@ The single fullscreen `8` diagnostic with these phases was subsequently reviewed
 and executed. It confirmed target activation; see [the feasibility evidence](windows-terminal-feasibility.md).
 Any next control requires its own reviewed arguments, fresh preflight and desktop
 slot authorization; the diagnostic is not a product launch bypass.
+
+
+## Explicit windowed comparison control
+
+The diagnostic-only trailing `--windowed-control` flag is accepted only with
+show command `8`, and rejects extra/unknown arguments before setup. It removes
+exactly `--fullscreen` from the known launch-plan prefix before appending the
+same explicit fixture executable/`--shell`/task/nonce arguments. Omitting the
+flag keeps the existing fullscreen diagnostic. Production adapter APIs and
+launch-plan construction do not use this comparison option.
+
+```powershell
+terminal-proof diagnose <absolute-task-directory> 8 --windowed-control
+```
+
+Creation and result logs explicitly label `WindowedControl`. This compares the
+fullscreen startup hypothesis only; windowed foreground preservation cannot
+establish the required initial fullscreen Passive presentation. Before a separate
+reviewed/serialized run, archive the previous task's normalized settings, generated
+state, markers and logs byte-for-byte; verify exact observed hashes and no owned
+processes; restore only its reviewed synthetic settings and remove only the
+explicitly archived task-generated state/nonce markers. Preserve all global
+configuration and recheck namespaces, binary hashes and external baselines.

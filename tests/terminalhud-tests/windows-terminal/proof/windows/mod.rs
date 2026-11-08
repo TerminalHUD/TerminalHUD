@@ -29,12 +29,17 @@ pub fn run() -> Result<()> {
             Path::new(arguments.get(2).ok_or("missing proof directory")?),
             arguments.get(3).ok_or("missing nonce")?,
         ),
-        Some("diagnose") => diagnostic::run(
-            Path::new(arguments.get(2).ok_or("missing proof directory")?),
-            show::Show::parse(arguments.get(3).map(String::as_str))?,
-        ),
+        Some("diagnose") => {
+            let show = show::Show::parse(arguments.get(3).map(String::as_str))?;
+            let presentation = startup::Presentation::parse(show.value(), &arguments[4..])?;
+            diagnostic::run(
+                Path::new(arguments.get(2).ok_or("missing proof directory")?),
+                show,
+                presentation,
+            )
+        }
         _ => Err(
-            "usage: terminal-proof preview <installed-terminal-exe> | diagnose <proof-dir> <4|8>"
+            "usage: terminal-proof preview <installed-terminal-exe> | diagnose <proof-dir> <4|8> [--windowed-control]"
                 .into(),
         ),
     }
