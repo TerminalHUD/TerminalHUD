@@ -1,6 +1,9 @@
 # HudSwitch backend tests
 
-Backend integration suites live here and use the generic test window rather than
-a terminal. Register Windows suites with `[[test]]` targets in
-`src/hudswitch-windows/Cargo.toml`, gating platform-specific source appropriately.
-Tests requiring an interactive desktop must be distinguished from unattended CI.
+`windows_backend.rs` is registered by `hudswitch-windows`. Ordinary workspace
+tests run safe noninteractive cases on Windows. The three explicit desktop cases
+are ignored by default and run serially only when requested with `--ignored`.
+
+See `docs/windows-backend.md` at the repository root for commands, actual-input
+assertions, foreground-policy handling, cleanup boundaries, and evidence limits.
+Real OS checks use purpose-built child windows, never a normal user application.
