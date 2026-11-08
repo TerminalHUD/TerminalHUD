@@ -15,3 +15,14 @@ hudswitch-core.workspace = true
 [[example]]
 name = "toolchain-probe"
 path = "../../tests/hudswitch-test-window/toolchain_probe.rs"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_System_DataExchange", "Win32_System_LibraryLoader", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse"] }
+
+[[example]]
+name = "test-window"
+path = "../../tests/hudswitch-test-window/main.rs"
+
+[[test]]
+name = "windows_backend"
+path = "../../tests/hudswitch-backend-tests/windows_backend.rs"

@@ -46,9 +46,11 @@ with the owning crate so workspace tests discover them.
 
 ## Portable checks from WSL or Linux
 
-From the repository root:
+From the repository root (fetch the locked dependencies once before the offline
+workspace metadata check on a fresh checkout):
 
 ```bash
+cargo fetch --locked
 python3 scripts/check_repository.py
 python3 scripts/check_workspace.py
 cargo fmt --all -- --check
