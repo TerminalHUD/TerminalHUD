@@ -8,6 +8,7 @@ use std::{
     cell::RefCell,
     collections::HashSet,
     io,
+    os::windows::io::AsRawHandle,
     rc::Rc,
     thread,
     time::{Duration, Instant},
@@ -61,7 +62,29 @@ impl<'a> AdapterLauncher<'a> {
         };
         let hwnd = verified.window_handle();
         let pid = verified.process_id();
-        observe::wait(|| unsafe { windows_sys::Win32::UI::WindowsAndMessaging::IsWindowVisible(hwnd as _) } != 0 && unsafe {windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow()} == hwnd as _)?;
+        let (raw, owner) = verified.into_parts();
+        // The controller presents and activates after acquisition. A verified
+        // Active receipt need not already own foreground before that stage.
+        observe::wait(|| unsafe {
+            windows_sys::Win32::UI::WindowsAndMessaging::IsWindowVisible(hwnd as _) != 0
+        })
+        .map_err(|error| {
+            use windows_sys::Win32::{System::Threading::*, UI::WindowsAndMessaging::*};
+            let visible = unsafe { IsWindowVisible(hwnd as _) } != 0;
+            let foreground = unsafe { GetForegroundWindow() };
+            let mut observed_pid = 0;
+            let observed_tid = unsafe { GetWindowThreadProcessId(hwnd as _, &mut observed_pid) };
+            let mut foreground_pid = 0;
+            let foreground_tid = unsafe { GetWindowThreadProcessId(foreground, &mut foreground_pid) };
+            let owner_wait = unsafe { WaitForSingleObject(owner.as_raw_handle(), 0) };
+            format!(
+                "Active proof acquisition visibility wait failed: {error}; expected_hwnd={hwnd} expected_pid={pid} observed_pid={observed_pid} observed_tid={observed_tid} visible={visible} foreground_hwnd={} foreground_pid={foreground_pid} foreground_tid={foreground_tid} owner_wait={owner_wait} owner_alive={} fixture_alive={} session={}; non-atomic observation",
+                foreground as isize,
+                owner_wait == windows_sys::Win32::Foundation::WAIT_TIMEOUT,
+                session.alive(),
+                proof.session
+            )
+        })?;
         let tid = unsafe {
             windows_sys::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId(
                 hwnd as _,
@@ -80,7 +103,6 @@ impl<'a> AdapterLauncher<'a> {
             "ACTIVE_IDENTITY launcher={} owner={pid} hwnd={hwnd} shell={} session={}",
             session.launcher.pid, proof.shell_pid, proof.session
         );
-        let (raw, owner) = verified.into_parts();
         // Exact fresh HWND/owner image, retained creation ancestry and nonce/session
         // correlation above satisfy this explicit delegated-launch trust boundary.
         let retained_owner = owner.try_clone()?;
