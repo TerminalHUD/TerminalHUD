@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "source_revision": "86a12eb12bc1fcd5b4bb3e722056c21a4f226aac",
+  "upstream_repository": "https://github.com/ratpack-workflow/ratpack",
+  "source_revision_origin": "supplied",
+  "files": {
+    ".codex/agents/ratpack_cleanup.toml": "fd73aca97eacad8c5ac044dfc79f5987e4364b0bd169fdaf7158d0439ed1b4bb",
+    ".codex/agents/ratpack_coordinator.toml": "b90bade597606b74e1e7823abef2bea62ca2116a621eae19c023d18e4c704e18",
+    ".codex/agents/ratpack_implementor.toml": "1e2665b1266144b6175cfcda8df05e6a495a12ebcf5ce8f0d1f3f889985895ec",
+    ".codex/agents/ratpack_reviewer.toml": "9d38c0afc0b30b3c322ef5de0517c06898e7a378610909ca9655054546d8f66d",
+    ".codex/agents/ratpack_workflow.toml": "2a0cb44aeb0a9d3db215a4621eae68c70e73aaba52558156b01ebd14b6006708",
+    ".github/pull_request_template.md": "db05d3f36205ad7a6bf00d51145810f50c65ad9ff45af876e2c844e2cf22bc3d",
+    "AGENTS.md": "106d8648b7515e2b6c9cc648d29f626e253d3a661d840e2394c68924ef659a79",
+    "CONTRIBUTING.md": "8a7b4d2aa9d50861c9fd956d3fa855d9b3434e9d9e42495bf675b274a972e2e8",
+    "docs/development.md": "bdc9a03e99ecbe52033e6a940ed6dc4df40417ef4a08fc8478f27241d3e8b3d0",
+    "ratpack.json": "151361f77d32d45740377b797644e3ad9d41dfde13ba8e1c6cbd2b9a5a009bd8"
+  }
+}
