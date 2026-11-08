@@ -78,3 +78,33 @@ Follow-up choices require an explicit plan: investigate an upstream startup fix;
 revisit the inconclusive documented show8 diagnostic with adequate owned foreground
 rights; or obtain a product decision to start Absent and create Active on user
 request. The last changes current requirements and does not prove Passive launch.
+
+
+## Source-backed startup lead (not yet measured)
+
+The pinned [TerminalWindow initialization](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalApp/TerminalWindow.cpp#L227-L251)
+requests fullscreen during its Initialized event. The page's
+[SetFullscreen](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalApp/TerminalPage.cpp#L3985-L3993)
+synchronously raises FullscreenChanged, which AppHost forwards to IslandWindow.
+Its [_SetFullscreenPosition](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/WindowsTerminal/IslandWindow.cpp#L1091-L1107)
+calls `SetWindowPos(HWND_TOP, ..., SWP_FRAMECHANGED)` without `SWP_NOACTIVATE`.
+The [Win32 contract](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowpos)
+identifies that missing flag as activating behavior. AppHost's later show handler
+explicitly yields to the dispatcher before ShowWindow. This fullscreen operation
+therefore provides an earlier activation candidate than the late foreground
+request already exempted for show commands 4 and 8. The current evidence does
+not prove which internal operation caused the measured activation.
+
+The diagnostic now logs the owned sink setup and performs one ordinary,
+identity-checked foreground request before starting the Terminal measurement.
+Failure to obtain foreground remains a prelaunch refusal, with namespace and
+external-window checks still performed. Unrelated transient foreground activity
+invalidates observation instead of allowing a false preserved-foreground result.
+These changes do not turn the earlier show8 timeout into launch evidence.
+
+Removing fullscreen and showing a windowed Terminal before verified presentation
+would not prove the required initial Passive fullscreen behavior. A hidden,
+nonfullscreen startup followed by verified no-activation full-monitor presentation
+before its first visibility is an unproven separate hypothesis; the existing
+backend does not implement fullscreen geometry. No such control, product change
+or requirement relaxation is included in this diagnostic fix.

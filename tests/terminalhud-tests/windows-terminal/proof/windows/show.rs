@@ -6,10 +6,10 @@ pub(crate) enum Show {
     ShowNa,
 }
 impl Show {
-    pub(crate) fn parse(argument: &str) -> Result<Self, &'static str> {
+    pub(crate) fn parse(argument: Option<&str>) -> Result<Self, &'static str> {
         match argument {
-            "4" => Ok(Self::NoActivate),
-            "8" => Ok(Self::ShowNa),
+            Some("4") => Ok(Self::NoActivate),
+            Some("8") => Ok(Self::ShowNa),
             _ => Err("diagnostic show command must be explicit 4 or 8"),
         }
     }

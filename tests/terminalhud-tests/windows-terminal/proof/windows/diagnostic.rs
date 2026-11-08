@@ -1,38 +1,63 @@
 //! Launch/trace/cleanup only. No backend acquisition, style changes or input.
 use super::{
-    Result, launch, observe, setup::Setup, show::Show, sources, underlay::Underlay,
-    witness::Witness,
+    Result, focus_evidence::Evidence, foreground_setup, launch, observe, setup::Setup, show::Show,
+    sources, underlay::Underlay, witness::Witness,
 };
 use std::path::Path;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 pub(super) fn run(task: &Path, show: Show) -> Result<()> {
+    println!("PHASE diagnostic-start showCommand={}", show.value());
     let setup = Setup::load(task)?;
+    println!("PHASE setup-validated");
     let sources_before = sources::check()?;
     if unsafe { SetProcessDPIAware() } == 0 {
         return Err("cannot set fixture DPI awareness".into());
     }
     let witness = Witness::capture()?;
-    let sink = Underlay::start()?;
-    observe::wait(|| unsafe { GetForegroundWindow() } == sink.hwnd())?;
-    let result = trace_session(&setup, &sink, show);
-    if sources::check()? != sources_before {
-        return Err("namespace set changed; evidence invalidated".into());
+    let result = (|| {
+        println!("PHASE sink-create");
+        let sink = Underlay::start()?;
+        foreground_setup::prepare(&sink)?;
+        trace_session(&setup, &sink, show)
+    })(); // Drop/join the owned sink before checking external witnesses.
+    let namespaces = sources::check().and_then(|after| {
+        if after == sources_before {
+            println!("PHASE namespace-check unchanged");
+            Ok(())
+        } else {
+            Err("namespace set changed; evidence invalidated".into())
+        }
+    });
+    let witnesses = witness.check();
+    for check in [&namespaces, &witnesses] {
+        if let Err(error) = check {
+            eprintln!("PHASE external-check failed: {error}");
+        }
     }
-    witness.check()?;
-    result
+    result?;
+    namespaces?;
+    witnesses
 }
 fn trace_session(setup: &Setup, sink: &Underlay, show: Show) -> Result<()> {
+    println!("PHASE launch-observation-start");
     let launched = launch::verified(setup, sink, show)?;
     let hwnd = launched.window.window_handle();
+    println!("PHASE fixture-exit-request");
     launched.session.request_exit()?;
     observe::wait(|| unsafe { IsWindow(hwnd as _) } == 0 && !launched.session.alive())?;
     println!(
         "PASS: diagnostic nonce session exited and dedicated target closed; no backend or input used"
     );
-    if launched.foreground_changed {
-        Err("diagnostic confirmed Passive foreground guard failure; not managing target".into())
-    } else {
-        println!("PASS: diagnostic launch preserved foreground");
-        Ok(())
+    match launched.evidence {
+        Evidence::TargetActivated { observation_invalid } => Err(format!(
+            "diagnostic confirmed target activation; unrelated_observation_invalid={observation_invalid}; not managing target"
+        ).into()),
+        Evidence::ObservationInvalid => Err(
+            "diagnostic observation invalid: non-sink foreground observed; not attributed to Terminal".into()
+        ),
+        Evidence::Preserved => {
+            println!("PASS: diagnostic launch preserved foreground throughout observation");
+            Ok(())
+        }
     }
 }

@@ -28,7 +28,10 @@ pub(super) fn start() -> Result<Underlay> {
     let name: Vec<_> = format!("TerminalHUD.TER9.Underlay.{}\0", fresh_guid()?)
         .encode_utf16()
         .collect();
+    let class = name[..name.len() - 1].to_vec();
+    let thread_class = class.clone();
     let (sender, receiver) = mpsc::sync_channel(1);
+    let (stop, stopped) = mpsc::channel();
     let thread = thread::spawn(move || unsafe {
         let instance = GetModuleHandleW(null());
         let brush = CreateSolidBrush(40 | (160 << 8) | (220 << 16));
@@ -40,7 +43,7 @@ pub(super) fn start() -> Result<Underlay> {
             ..std::mem::zeroed()
         };
         if RegisterClassW(&class) == 0 {
-            let _ = sender.send(0);
+            let _ = sender.send((0, 0));
             DeleteObject(brush);
             return;
         }
@@ -62,24 +65,32 @@ pub(super) fn start() -> Result<Underlay> {
             ShowWindow(hwnd, SW_SHOW);
             UpdateWindow(hwnd);
         }
-        let _ = sender.send(hwnd as isize);
+        let thread_id = windows_sys::Win32::System::Threading::GetCurrentThreadId();
+        let identity = Identity {
+            process: windows_sys::Win32::System::Threading::GetCurrentProcessId(),
+            thread: thread_id,
+            class: thread_class,
+        };
+        let _ = sender.send((hwnd as isize, thread_id));
         if !hwnd.is_null() {
-            let mut message = std::mem::zeroed();
-            while GetMessageW(&mut message, null_mut(), 0, 0) > 0 {
-                TranslateMessage(&message);
-                DispatchMessageW(&message);
-            }
+            run::pump(hwnd, &identity, stopped);
         }
         UnregisterClassW(name.as_ptr(), instance);
         DeleteObject(brush);
     });
-    let hwnd = receiver.recv()?;
+    let (hwnd, owner_thread) = receiver.recv()?;
     if hwnd == 0 {
         let _ = thread.join();
         return Err("owned underlay creation failed".into());
     }
     Ok(Underlay {
         hwnd,
+        identity: Identity {
+            process: unsafe { windows_sys::Win32::System::Threading::GetCurrentProcessId() },
+            thread: owner_thread,
+            class,
+        },
+        stop,
         thread: Some(thread),
     })
 }

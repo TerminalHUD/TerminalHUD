@@ -1,6 +1,8 @@
 use terminalhud_windows_terminal::*;
 #[path = "cases/correlation.rs"]
 mod correlation;
+#[path = "cases/foreground.rs"]
+mod foreground;
 #[path = "cases/identity.rs"]
 mod identity;
 #[path = "cases/launch.rs"]

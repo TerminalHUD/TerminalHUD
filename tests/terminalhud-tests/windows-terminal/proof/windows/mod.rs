@@ -1,6 +1,8 @@
 mod diagnostic;
 mod files;
+mod focus_evidence;
 mod foreground;
+mod foreground_setup;
 mod launch;
 mod observe;
 mod preview;
@@ -29,10 +31,11 @@ pub fn run() -> Result<()> {
         ),
         Some("diagnose") => diagnostic::run(
             Path::new(arguments.get(2).ok_or("missing proof directory")?),
-            show::Show::parse(arguments.get(3).map(String::as_str).unwrap_or("4"))?,
+            show::Show::parse(arguments.get(3).map(String::as_str))?,
         ),
         _ => Err(
-            "usage: terminal-proof preview <installed-terminal-exe> | diagnose <proof-dir>".into(),
+            "usage: terminal-proof preview <installed-terminal-exe> | diagnose <proof-dir> <4|8>"
+                .into(),
         ),
     }
 }

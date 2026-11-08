@@ -63,3 +63,32 @@ numeric/classified foreground events, then requests nonce fixture exit. It has
 no backend construction, styles, state transitions, renderer checks or input.
 Unknown namespaces, unsafe startup settings and stale protocol markers refuse
 execution. Native CI compiles it but never runs this desktop experiment.
+
+
+## Foreground setup and observation phases
+
+The diagnostic requires an explicit show command; omission never selects a
+comparison implicitly. Before creating Terminal it records its selected mode,
+validated setup, sink creation, the sink foreground-request result and actual
+foreground readiness. It verifies the sink's unique class, owning process/thread
+and live thread before one ordinary `SetForegroundWindow` request. If the owned
+sink does not become foreground within 3 seconds, it logs `prelaunch-refused`
+with the observed HWND and does not create Terminal. No retries, global input,
+`AttachThreadInput`, focus-lock changes or focus restoration are used.
+
+The observation hook begins only after that setup. A target foreground event
+remains a target-activation failure even if a later event restores the sink.
+Any unrelated foreground event or unrelated final foreground invalidates the
+observation; when target activation and unrelated activity both occur, both are
+reported. Only a sink-only trace with final sink can report preserved foreground.
+
+The sink owns its shutdown: Drop signals a private channel and joins its thread;
+that thread verifies exact process/thread/class before destroying its window.
+It sends no close message to a stored HWND. Already-closed or mismatched windows
+are reported and left untouched. This reduces stale-handle risk; separate Win32
+identity queries are not an atomic lifetime guarantee. Namespace and preexisting
+Terminal witness checks run after sink teardown even on a prelaunch refusal.
+
+The next proposed experiment is a single fullscreen `8` diagnostic with these
+phases, after serialized desktop authorization and fresh fixture review. This
+implementation change supplies no new desktop result by itself.

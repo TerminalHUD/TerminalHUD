@@ -1,5 +1,11 @@
 use super::{
-    Result, foreground::Monitor, session::Session, setup::Setup, show::Show, underlay::Underlay,
+    Result,
+    focus_evidence::{self, Evidence},
+    foreground::Monitor,
+    session::Session,
+    setup::Setup,
+    show::Show,
+    underlay::Underlay,
 };
 use hudswitch_core::VisibleState;
 use std::{
@@ -12,7 +18,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 pub(super) struct Launched {
     pub window: native::VerifiedWindow,
     pub session: Session,
-    pub foreground_changed: bool,
+    pub evidence: Evidence,
 }
 pub(super) fn verified(setup: &Setup, sink: &Underlay, show: Show) -> Result<Launched> {
     if unsafe { GetForegroundWindow() } != sink.hwnd() {
@@ -63,7 +69,13 @@ pub(super) fn verified(setup: &Setup, sink: &Underlay, show: Show) -> Result<Lau
         final_foreground as isize,
         foreground_events.contains(&hwnd)
     );
-    let changed = foreground_events.contains(&hwnd) || final_foreground != sink.hwnd();
+    let evidence = focus_evidence::classify(
+        sink.hwnd() as isize,
+        hwnd,
+        final_foreground as isize,
+        &foreground_events,
+    );
+    println!("FOCUS_CLASSIFICATION {evidence:?}");
     let classified: Vec<_> = foreground_events
         .iter()
         .map(|event| {
@@ -84,6 +96,6 @@ pub(super) fn verified(setup: &Setup, sink: &Underlay, show: Show) -> Result<Lau
     Ok(Launched {
         window: verified,
         session,
-        foreground_changed: changed,
+        evidence,
     })
 }
