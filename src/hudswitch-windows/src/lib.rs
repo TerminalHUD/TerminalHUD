@@ -351,13 +351,19 @@ impl<L: Launcher> Backend for WindowsBackend<L> {
             exstyle: exstyle(window.hwnd)?,
             visible: unsafe { IsWindowVisible(window.hwnd) } != 0,
         };
-        let token = NEXT_TOKEN
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |value| {
-                value
-                    .checked_add(1)
-                    .filter(|value| *value <= u32::MAX as usize)
-            })
-            .map_err(|_| Error::Unsupported("acquisition token exhausted"))?;
+        let token = loop {
+            let value = NEXT_TOKEN.load(Ordering::Relaxed);
+            let next = value
+                .checked_add(1)
+                .filter(|value| *value <= u32::MAX as usize)
+                .ok_or(Error::Unsupported("acquisition token exhausted"))?;
+            if NEXT_TOKEN
+                .compare_exchange_weak(value, next, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+            {
+                break value;
+            }
+        };
         let token = usize::try_from((u64::from(std::process::id()) << 32) | token as u64)
             .map_err(|_| Error::Unsupported("64-bit Windows target required"))?;
         if unsafe { SetPropW(window.hwnd, self.atom.key(), token as HANDLE) } == 0 {
