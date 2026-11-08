@@ -15,6 +15,9 @@ The MVP targets Windows 11 and Windows Terminal and is implemented in Rust.
 Linux and macOS are future platform milestones. An embedded terminal is a
 possible future feature, not part of the MVP.
 
+Every freshly created HUD starts Active and takes focus. Passive and Hidden
+remain available after launch.
+
 The repository contains the product/design documentation and the Rust workspace
 foundation. Runtime HUD behavior is not implemented yet. See the
 [build instructions](docs/building.md) for the crate map and Windows test path.
@@ -28,7 +31,7 @@ TerminalHUD is licensed under the [MIT License](LICENSE).
 - `Win+Backtick` toggles interaction between Active and Passive. If the HUD is
   hidden or not running, it is shown or launched Active.
 - `Win+Shift+Backtick` hides the HUD or restores the state from which it was
-  hidden. If the HUD is not running, it is launched Passive.
+  hidden. If the HUD is not running, it is launched Active.
 - `Escape` at an empty, idle supported-shell prompt changes Active to Passive.
 - `Escape` inside Neovim and other interactive terminal programs is delivered
   normally.

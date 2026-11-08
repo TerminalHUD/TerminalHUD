@@ -6,6 +6,11 @@ hotkeys, settings UI, startup registration or installer. Real backend/adapter
 composition belongs to the following integration task. The long-term crate
 layout remains the one in [architecture.md](architecture.md).
 
+The shared product controller selects Active for any command that creates a
+fresh target, including an absent-target visibility toggle. Existing targets
+retain Passive/Hidden behavior; an absent `passive` request does not create one.
+This prototype demonstrates command policy only, not real window behavior.
+
 ## Running
 
 Build both binaries as described in [building.md](building.md). From native

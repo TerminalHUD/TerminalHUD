@@ -24,6 +24,14 @@ The ID changes on acquisition, so a delayed old-window closure/focus notificatio
 cannot affect a replacement target. A stale target discovered during validation
 becomes Absent; a toggle then launches its replacement with the requested intent.
 
+`Controller::new` preserves that requested-state creation behavior.
+`Controller::with_creation_state(backend, state)` selects a visible state for
+every transition that creates a missing target. The policy is applied after
+target validation and before capabilities, focus capture, and acquisition, so
+stale-target replacement follows the same policy atomically. Existing targets
+and events that do not create targets are unchanged. TerminalHUD selects Active;
+the library retains generic Passive creation support.
+
 A passive request only changes Active to Passive. The caller decides when such
 a request is appropriate; the core does not know about prompts, shells, or keys.
 A FocusLost event preserves the foreground window the user selected. Hiding or

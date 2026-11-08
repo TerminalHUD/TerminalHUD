@@ -49,9 +49,16 @@ impl<B: Backend> Controller<B> {
             failure.recovery = Recovery::Unconfirmed;
             return Err(failure);
         }
-        let Some(requested) = super::transition::requested_state(event, state) else {
+        let Some(mut requested) = super::transition::requested_state(event, state) else {
             return Ok(None);
         };
+        if target.is_none() {
+            requested = match self.creation_state {
+                Some(VisibleState::Active) => State::Active,
+                Some(VisibleState::Passive) => State::Passive,
+                None => requested,
+            };
+        }
         self.check_capabilities(requested, target.is_none())?;
         // Capture the external foreground before acquisition can activate a new window.
         let focus = if requested == State::Active {

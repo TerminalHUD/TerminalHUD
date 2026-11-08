@@ -2,7 +2,7 @@
 
 #![forbid(unsafe_code)]
 
-use hudswitch_core::{Backend, Controller, Event, Status, TransitionError};
+use hudswitch_core::{Backend, Controller, Event, Status, TransitionError, VisibleState};
 
 /// Platform composition imports these contracts without reversing crate edges.
 pub mod integration {
@@ -38,7 +38,7 @@ pub struct ShellController<B: Backend> {
 impl<B: Backend> ShellController<B> {
     pub fn new(backend: B) -> Self {
         Self {
-            controller: Controller::new(backend),
+            controller: Controller::with_creation_state(backend, VisibleState::Active),
         }
     }
 

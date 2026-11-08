@@ -30,7 +30,7 @@ fn tray_menu_and_ipc_remain_responsive_in_modal_loop() {
         started.elapsed() < Duration::from_secs(1),
         "IPC stalled in menu loop"
     );
-    assert_eq!(reply.status.state, Some(State::Passive));
+    assert_eq!(reply.status.state, Some(State::Active));
     println!("IPC while modal confirmed");
     let menu = owned_windows::wait_menu(primary.pid());
     invoke_menu::interaction(primary.pid(), menu as usize);
@@ -38,7 +38,7 @@ fn tray_menu_and_ipc_remain_responsive_in_modal_loop() {
     loop {
         let status = primary.call(Command::Status);
         if status.menu_commands == 1 {
-            assert_eq!(status.status.state, Some(State::Active));
+            assert_eq!(status.status.state, Some(State::Passive));
             break;
         }
         assert!(

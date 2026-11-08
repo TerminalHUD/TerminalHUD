@@ -18,8 +18,7 @@ committing to property names.
     "toggleVisibility": "Win+Shift+Backtick"
   },
   "startup": {
-    "startWithWindows": true,
-    "state": "passive"
+    "startWithWindows": true
   },
   "display": {
     "monitor": "primary",
@@ -42,7 +41,6 @@ committing to property names.
 - Interaction shortcut
 - Visibility shortcut
 - Start with Windows
-- Startup state: Tray only, Hidden, Passive, or Active
 - Active background opacity
 - Default HUD profile
 - Installed shell integrations
@@ -70,10 +68,15 @@ validation error through logs and tray status, and waits for a corrected file.
 ## Fixed initial Windows-milestone values
 
 - One HUD target
+- Every newly created HUD starts Active, including shortcut-triggered relaunch
 - Primary monitor
 - Passive background opacity of zero
 - Windows 11 support
 - Per-user installation and settings
+
+Initial state is fixed for the MVP, as recorded in
+[ADR 0009](decisions/0009-active-hud-creation.md). Passive and Hidden apply to
+existing targets; they are not configurable creation states.
 
 The portable configuration model should not expose Windows paths, virtual-key
 codes, or `HWND` values. Platform-specific serialization translates portable

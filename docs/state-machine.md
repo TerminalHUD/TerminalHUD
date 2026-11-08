@@ -27,7 +27,13 @@ encode that product limitation into global static state.
 Target availability is tracked separately from the three states. A target may
 be absent because it has not been launched or because the user closed it.
 
-## Transitions
+## TerminalHUD transitions
+
+TerminalHUD selects Active for every new target, including after validation
+discovers a closed/stale target. This product policy follows
+[ADR 0009](decisions/0009-active-hud-creation.md). The generic HudSwitch default
+still follows the requested state: absent visibility toggles create Passive
+unless the caller selects a creation-state policy.
 
 | Trigger | From | To | Notes |
 | --- | --- | --- | --- |
@@ -39,7 +45,7 @@ be absent because it has not been launched or because the user closed it.
 | Visibility toggle | Active | Hidden(Active) | Hide, remember Active, and restore prior focus |
 | Visibility toggle | Hidden(Passive) | Passive | Show without taking focus |
 | Visibility toggle | Hidden(Active) | Active | Show and take focus |
-| Visibility toggle | Absent | Passive | Launch and make click-through without stealing focus |
+| Visibility toggle | Absent | Active | Launch, acquire window, and activate |
 | Prompt-aware Escape | Active | Passive | Shell integration requests the transition |
 | Unexpected focus loss | Active | Passive | Prevent a transparent fullscreen input blocker |
 | Managed window closed | Any | Absent | TerminalHUD remains running |

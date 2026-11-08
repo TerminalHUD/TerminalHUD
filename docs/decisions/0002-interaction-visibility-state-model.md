@@ -3,6 +3,9 @@
 - Status: Accepted
 - Date: 2026-11-07
 
+The absent-target creation policy below is superseded for TerminalHUD by
+[ADR 0009](0009-active-hud-creation.md). Existing-target transitions are unchanged.
+
 ## Context
 
 The HUD must remain visible without blocking underlying applications, become

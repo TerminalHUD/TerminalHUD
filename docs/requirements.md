@@ -1,6 +1,6 @@
 # Requirements
 
-Status: initial agreed specification.
+Status: agreed specification, including [Active creation](decisions/0009-active-hud-creation.md).
 
 ## Product scope
 
@@ -15,8 +15,9 @@ Status: initial agreed specification.
   Windows release.
 - The HUD is placed on the primary monitor.
 - TerminalHUD is installed per user and starts automatically with Windows.
-- The default startup behavior is to launch the HUD Passive. Startup behavior
-  is configurable.
+- Every newly created HUD launches Active and takes focus, including startup
+  and relaunch after the managed terminal closes. Initial state is fixed for
+  the MVP; existing targets can still become Passive or Hidden.
 - TerminalHUD provides a notification-area icon and native tray menu.
 - Initial configuration is a documented JSON file with CLI commands to open,
   validate, and reload it. A graphical settings window is not required for the
@@ -57,7 +58,7 @@ the same transitions.
 - Passive becomes Hidden and remembers Passive.
 - Active becomes Hidden and remembers Active.
 - Hidden restores the remembered state.
-- If no target window exists, TerminalHUD launches it Passive.
+- If no target window exists, TerminalHUD launches it Active.
 
 ### Prompt-aware Escape
 
@@ -117,7 +118,7 @@ must not silently edit shell startup files.
 - Closing the managed terminal leaves TerminalHUD running in the notification
   area.
 - The next interaction shortcut relaunches the terminal Active.
-- The next visibility shortcut relaunches the terminal Passive.
+- The next visibility shortcut relaunches the terminal Active.
 - Quitting TerminalHUD restores the managed window's original styles and leaves
   the terminal running as a normal window.
 - A crash or forced exit must not intentionally leave a terminal permanently
@@ -138,8 +139,8 @@ must not silently edit shell startup files.
   appropriate per-user package or installation model.
 - TerminalHUD exposes a same-user local IPC command for shell integrations,
   conceptually `terminalhud passive`.
-- Startup, shortcuts, active opacity, default HUD profile, and relevant lifecycle
-  behaviors are configurable.
+- Start with Windows, shortcuts, active opacity, default HUD profile, and
+  relevant lifecycle behaviors are configurable.
 
 ## Initial non-goals
 
