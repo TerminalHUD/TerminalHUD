@@ -2,8 +2,8 @@ use super::{LauncherProcess, NativeError};
 use crate::LaunchPlan;
 use hudswitch_core::VisibleState;
 
-/// The measured fullscreen Passive path activates transiently. Do not spawn a
-/// normal product target until a supported nonactivating path is proven.
+/// Reject unsupported Passive creation before calling the supplied launcher.
+/// TerminalHUD selects Active creation; the adapter never silently changes intent.
 pub(super) fn run(
     plan: &LaunchPlan,
     launch: impl FnOnce() -> Result<LauncherProcess, NativeError>,

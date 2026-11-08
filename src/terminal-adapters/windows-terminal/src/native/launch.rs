@@ -1,12 +1,11 @@
 use super::command::{arguments, wide};
 use super::{NativeError, error::last};
 use crate::LaunchPlan;
-use hudswitch_core::VisibleState;
 use std::os::windows::io::{FromRawHandle, OwnedHandle};
 use std::path::Path;
 use std::ptr::null;
 use windows_sys::Win32::System::Threading::*;
-use windows_sys::Win32::UI::WindowsAndMessaging::*;
+use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 pub struct LauncherProcess {
     pub pid: u32,
     _process: OwnedHandle,
@@ -64,11 +63,7 @@ fn create(
     let startup = STARTUPINFOW {
         cb: std::mem::size_of::<STARTUPINFOW>() as u32,
         dwFlags: STARTF_USESHOWWINDOW,
-        wShowWindow: if plan.intent == VisibleState::Passive {
-            SW_SHOWNOACTIVATE as u16
-        } else {
-            SW_SHOWNORMAL as u16
-        },
+        wShowWindow: SW_SHOWNORMAL as u16,
         ..unsafe { std::mem::zeroed() }
     };
     let mut process: PROCESS_INFORMATION = unsafe { std::mem::zeroed() };
