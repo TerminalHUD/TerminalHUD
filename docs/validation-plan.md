@@ -31,6 +31,8 @@ not unresolved product requirements.
   profiles.
 - Fall back safely if the configured default profile disappears.
 - Verify the primary-monitor fullscreen launch path.
+- Verify every fresh target starts Active, including startup and either shortcut
+  after closure or stale-target validation; existing Passive/Hidden behavior remains.
 
 ## Shell integrations
 
@@ -59,7 +61,7 @@ not unresolved product requirements.
 
 The MVP is technically viable when:
 
-1. The tray process starts at login in Passive without stealing focus.
+1. The tray process starts at login and creates an Active HUD that receives focus.
 2. Both global shortcuts implement the documented state machine.
 3. Prompt-aware Escape works in PowerShell, WSL Bash, and Git Bash without
    stealing Escape from Neovim.

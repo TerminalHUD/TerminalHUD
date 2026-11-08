@@ -1,4 +1,4 @@
-use crate::{Availability, Backend, State, Status};
+use crate::{Availability, Backend, State, Status, VisibleState};
 
 mod acquire;
 mod apply;
@@ -26,6 +26,7 @@ pub struct Controller<B: Backend> {
     managed: Option<Managed<B>>,
     stopped: bool,
     generation: u64,
+    creation_state: Option<VisibleState>,
 }
 
 impl<B: Backend> Controller<B> {
@@ -35,6 +36,16 @@ impl<B: Backend> Controller<B> {
             managed: None,
             stopped: false,
             generation: 0,
+            creation_state: None,
+        }
+    }
+
+    /// Select the visible state for transitions that create a missing target.
+    /// Existing targets and events that do not create remain unchanged.
+    pub fn with_creation_state(backend: B, state: VisibleState) -> Self {
+        Self {
+            creation_state: Some(state),
+            ..Self::new(backend)
         }
     }
 

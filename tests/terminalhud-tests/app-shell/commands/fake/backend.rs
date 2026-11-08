@@ -8,15 +8,17 @@ impl Backend for Fake {
     fn capabilities(&self) -> Capabilities {
         Capabilities::ALL
     }
-    fn acquire(&mut self, _: VisibleState) -> Result<Acquired<(), ()>, Self::Error> {
+    fn acquire(&mut self, intent: VisibleState) -> Result<Acquired<(), ()>, Self::Error> {
         self.calls.fetch_add(1, Ordering::Relaxed);
+        self.creation.intents.lock().unwrap().push(intent);
+        self.creation.stale.store(false, Ordering::Relaxed);
         Ok(Acquired {
             target: (),
             original: (),
         })
     }
     fn is_valid(&mut self, _: &()) -> Result<bool, Self::Error> {
-        Ok(true)
+        Ok(!self.creation.stale.load(Ordering::Relaxed))
     }
     fn foreground(&mut self) -> Result<Option<()>, Self::Error> {
         self.calls.fetch_add(1, Ordering::Relaxed);

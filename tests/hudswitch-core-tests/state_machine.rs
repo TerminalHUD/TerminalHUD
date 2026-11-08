@@ -7,6 +7,7 @@ mod fake;
 use fake::{OTHER_STYLE, assert_view, setup};
 
 mod capabilities;
+mod creation;
 mod focus;
 mod launch;
 mod lifecycle;
