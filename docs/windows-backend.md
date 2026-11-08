@@ -31,9 +31,24 @@ Acquisition snapshots original owned state before style mutations and registers
 an atom-backed, per-acquisition window marker. An existing marker is rejected,
 including another controller/process's marker. Every target operation checks the
 retained process lifetime, owning PID/thread, and token; HWND existence alone is
-insufficient. Destroyed/replaced or unmarked windows are rejected. The registered
-atom has an explicit lifetime rather than creating a new global atom for each
-window. Dropping tokens releases handles/metadata, not the target process.
+insufficient. Detected identity changes and unmarked windows are rejected.
+Acquisition revalidates the receipt before acquisition-side reads and again
+immediately before checking/installing its marker. If post-install validation
+fails, cleanup removes only the exact marker token this acquisition installed,
+even if the recorded process/window identity no longer validates. It does not
+remove a different owner's marker or restore styles on a replacement window.
+The registered atom has an explicit lifetime rather than creating a new global
+atom for each window. Dropping tokens releases handles/metadata, not the target
+process.
+
+Win32 does not make window validation, snapshot reads, and property/style writes
+an atomic lifetime transaction. A window can be destroyed or a handle reused
+between API calls; matching PID/thread values alone cannot identify same-thread
+handle reuse before this acquisition's marker exists. Launch adapters must
+coordinate exclusive acquisition and target lifetime rather than retain receipts
+across uncoordinated destruction/recreation. Revalidation and owned-marker cleanup
+bound detected failures; they are not a claim to eliminate every intercall HWND
+race or provide concurrent-owner arbitration.
 
 Original-state restoration reapplies only style bits the backend attempted to
 change, plus topmost/visibility when it changed those. Current unrelated style
@@ -82,7 +97,10 @@ Timeouts return failure; they do not justify a false safe/unmanaged state.
 ## Automated and explicit desktop checks
 
 Ordinary `cargo test --workspace --locked` runs noninteractive Windows checks and
-the portable model suite. Desktop tests are explicitly ignored, so unattended CI
+the portable model suite. Hidden-window unit regressions deliberately stale a
+receipt identity, assert rejection without a leftover marker, and verify cleanup
+of only the exact owned token after identity invalidation. They neither show nor
+focus windows and do not assume a real HWND-reuse schedule. Desktop tests are explicitly ignored, so unattended CI
 does not silently certify focus or mouse routing.
 
 On the actual Windows desktop, use the native build path from

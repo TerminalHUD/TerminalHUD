@@ -99,20 +99,34 @@ impl LaunchedWindow {
     fn claim(hwnd: HWND, process: OwnedHandle) -> Result<Self, Error> {
         let mut pid = 0;
         let tid = unsafe { GetWindowThreadProcessId(hwnd, &mut pid) };
-        if tid == 0
-            || pid == 0
-            || unsafe { GetProcessId(process.as_raw_handle()) } != pid
-            || unsafe { GetAncestor(hwnd, GA_ROOT) } != hwnd
-            || unsafe { WaitForSingleObject(process.as_raw_handle(), 0) } != WAIT_TIMEOUT
-        {
-            return Err(Error::InvalidTarget);
-        }
-        Ok(Self {
+        let window = Self {
             hwnd,
             process,
             pid,
             tid,
-        })
+        };
+        window.ensure_current()?;
+        Ok(window)
+    }
+
+    fn has_current_identity(&self) -> bool {
+        let mut pid = 0;
+        let tid = unsafe { GetWindowThreadProcessId(self.hwnd, &mut pid) };
+        tid != 0
+            && pid != 0
+            && tid == self.tid
+            && pid == self.pid
+            && unsafe { GetProcessId(self.process.as_raw_handle()) } == self.pid
+            && unsafe { GetAncestor(self.hwnd, GA_ROOT) } == self.hwnd
+            && unsafe { WaitForSingleObject(self.process.as_raw_handle(), 0) } == WAIT_TIMEOUT
+    }
+
+    fn ensure_current(&self) -> Result<(), Error> {
+        if self.has_current_identity() {
+            Ok(())
+        } else {
+            Err(Error::InvalidTarget)
+        }
     }
 }
 
@@ -158,13 +172,20 @@ impl Target {
         self.window.hwnd
     }
     fn valid(&self) -> bool {
-        let mut pid = 0;
-        let tid = unsafe { GetWindowThreadProcessId(self.window.hwnd, &mut pid) };
-        tid == self.window.tid
-            && pid == self.window.pid
-            && unsafe { WaitForSingleObject(self.window.process.as_raw_handle(), 0) }
-                == WAIT_TIMEOUT
+        self.window.has_current_identity()
             && unsafe { GetPropW(self.window.hwnd, self.atom.key()) } as usize == self.token
+    }
+
+    fn remove_own_marker(&self) -> Result<(), Error> {
+        // Cleanup must also work after identity validation fails. Never remove
+        // a marker whose exact token is not ours, even on a recycled HWND.
+        if unsafe { GetPropW(self.window.hwnd, self.atom.key()) } as usize != self.token {
+            return Err(Error::InvalidTarget);
+        }
+        if unsafe { RemovePropW(self.window.hwnd, self.atom.key()) } as usize != self.token {
+            return Err(last_error("RemovePropW acquisition identity"));
+        }
+        Ok(())
     }
     fn ensure(&self) -> Result<(), Error> {
         if self.valid() {
@@ -176,11 +197,7 @@ impl Target {
 }
 impl Drop for Target {
     fn drop(&mut self) {
-        if self.valid() {
-            unsafe {
-                RemovePropW(self.window.hwnd, self.atom.key());
-            }
-        }
+        let _ = self.remove_own_marker();
     }
 }
 
@@ -335,11 +352,10 @@ impl<L: Launcher> Backend for WindowsBackend<L> {
 
     fn acquire(&mut self, intent: VisibleState) -> Result<Acquired<Target, Original>, Error> {
         let window = self.launcher.launch(intent)?;
+        // A receipt may have been held while its original window exited.
+        window.ensure_current()?;
         if intent == VisibleState::Passive && unsafe { GetForegroundWindow() } == window.hwnd {
             return Err(Error::Unsupported("launcher activated a Passive target"));
-        }
-        if !unsafe { GetPropW(window.hwnd, self.atom.key()) }.is_null() {
-            return Err(Error::AlreadyManaged);
         }
         if unsafe { GetClassLongPtrW(window.hwnd, GCL_STYLE) } as u32 & (CS_OWNDC | CS_CLASSDC) != 0
         {
@@ -366,6 +382,13 @@ impl<L: Launcher> Backend for WindowsBackend<L> {
         };
         let token = usize::try_from((u64::from(std::process::id()) << 32) | token as u64)
             .map_err(|_| Error::Unsupported("64-bit Windows target required"))?;
+        // Revalidate after snapshot/token preparation, then reject an existing
+        // owner immediately before the metadata write. This is not an atomic
+        // window-lifetime lock; callers must serialize exclusive acquisition.
+        window.ensure_current()?;
+        if !unsafe { GetPropW(window.hwnd, self.atom.key()) }.is_null() {
+            return Err(Error::AlreadyManaged);
+        }
         if unsafe { SetPropW(window.hwnd, self.atom.key(), token as HANDLE) } == 0 {
             return Err(last_error("SetPropW (check privilege compatibility)"));
         }
@@ -539,9 +562,10 @@ impl<L: Launcher> Backend for WindowsBackend<L> {
             return Err(Error::Timeout("original style restoration"));
         }
         target.ensure()?;
-        if unsafe { RemovePropW(target.window.hwnd, target.atom.key()) } as usize != target.token {
-            return Err(last_error("RemovePropW acquisition identity"));
-        }
-        Ok(())
+        target.remove_own_marker()
     }
 }
+
+#[cfg(test)]
+#[path = "../../../tests/hudswitch-backend-tests/acquisition.rs"]
+mod acquisition_tests;
