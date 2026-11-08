@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  check:
+  repository:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,3 +32,40 @@ jobs:
           else
             git show --check --oneline "$HEAD_SHA"
           fi
+
+  rust:
+    name: Rust (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare stable Rust
+        run: rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+      - name: Check workspace architecture
+        run: python scripts/check_workspace.py
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Lint all workspace targets
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Build all workspace targets
+        run: cargo build --workspace --all-targets --locked
+      - name: Run workspace tests
+        run: cargo test --workspace --locked
+      - name: Run native toolchain probe
+        run: cargo run --locked -p hudswitch-windows --example toolchain-probe
+
+  check:
+    if: always()
+    needs: [repository, rust]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require repository and both Rust jobs to succeed
+        env:
+          REPOSITORY_RESULT: ${{ needs.repository.result }}
+          RUST_RESULT: ${{ needs.rust.result }}
+        run: |
+          test "$REPOSITORY_RESULT" = success
+          test "$RUST_RESULT" = success

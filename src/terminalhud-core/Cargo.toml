@@ -1,0 +1,13 @@
+[package]
+name = "terminalhud-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+hudswitch-core.workspace = true
