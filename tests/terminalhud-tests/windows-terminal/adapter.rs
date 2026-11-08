@@ -9,6 +9,8 @@ mod identity;
 mod input_recovery;
 #[path = "cases/launch.rs"]
 mod launch;
+#[path = "cases/output_marker.rs"]
+mod output_marker;
 #[path = "cases/profiles.rs"]
 mod profiles;
 #[path = "cases/underlay.rs"]

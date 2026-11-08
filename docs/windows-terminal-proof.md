@@ -69,8 +69,9 @@ cannot exclude concurrent user input atomically. No keyboard/global shortcuts ar
 Pixel reads cover only the verified Terminal/owned sink; no desktop screenshot
 or unrelated window content is saved. Black background at 35% over RGB
 (40,160,220) should approximate (26,104,143); Passive should preserve the blue.
-The fixture predicate allows six levels per channel and requires ten near-white
-samples (all channels at least 245). These are bounded composition observations,
+The fixture emits truecolor RGB white foreground glyphs at rows 2–5, columns
+2–25; SGR palette white is not used. The fixture predicate allows six levels
+per channel and requires ten near-white samples (all channels at least 245). These are bounded composition observations,
 not complete renderer, color-management or glyph certification.
 
 Any identity, focus, layering or rendering failure stops the sequence and
@@ -92,3 +93,15 @@ hash. Preserve all global configuration throughout.
 Portable results cover only that fixture/version. Installed fragment reload,
 Preview and complete ordinary-profile cloning remain separate validation work.
 See [startup findings](windows-terminal-feasibility.md) for the accepted rationale.
+
+
+Before renderer sampling, the proof validates a private
+`fixture-output-flushed.json` marker against the exact retained shell PID,
+nonce, profile and session, and requires phase `output-flushed`. The fixture
+writes it only after successful stdout flush. Startup rejects any stale marker;
+outer preflight/archive/cleanup must include it alongside session/exit markers.
+This proves bytes were emitted, not that the GPU painted them. The existing
+three-second bounded sampling retry and strict predicate remain unchanged.
+Failures report display/scan bounds and one actual sampled pixel selected by
+maximum minimum RGB channel, including its coordinate, to distinguish palette,
+geometry and attenuation without combining channels from different pixels.

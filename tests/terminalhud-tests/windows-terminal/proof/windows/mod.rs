@@ -2,6 +2,7 @@ mod active;
 mod files;
 mod foreground_setup;
 mod observe;
+mod output_marker;
 mod preview;
 mod session;
 mod setup;

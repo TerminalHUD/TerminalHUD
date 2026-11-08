@@ -18,11 +18,19 @@ pub(super) fn run(task: &Path, nonce: &str) -> Result<()> {
         &task.join("session-proof.json"),
         proof.to_string().as_bytes(),
     )?;
-    print!("\x1b[2J\x1b[H\x1b[?25l\x1b[97mTerminalHUD isolated TER-9 proof\r\n");
-    for row in 10..18 {
-        print!("\x1b[{row};5H{}", "█".repeat(24));
+    print!("\x1b[2J\x1b[H\x1b[?25l\x1b[38;2;255;255;255mTerminalHUD isolated TER-9 proof\r\n");
+    for row in 2..6 {
+        print!("\x1b[{row};2H{}", "█".repeat(24));
     }
     std::io::stdout().flush()?;
+    let mut flushed = proof;
+    flushed["phase"] = json!("output-flushed");
+    flushed["foregroundRgb"] = json!([255, 255, 255]);
+    flushed["block"] = json!({"row":2,"rows":4,"column":2,"columns":24});
+    write_new(
+        &task.join("fixture-output-flushed.json"),
+        flushed.to_string().as_bytes(),
+    )?;
     while !task.join("exit.request").exists() {
         std::thread::sleep(Duration::from_millis(50));
     }

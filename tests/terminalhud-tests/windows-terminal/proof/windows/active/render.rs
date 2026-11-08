@@ -1,80 +1,42 @@
-//! Read only owned fixture/sink pixels; no whole-desktop screenshot is saved.
+//! Strict bounded paint observations after correlated fixture output has flushed.
 use super::{
     super::{Result, underlay::Underlay},
     identity,
     launch::Launched,
-    render_evidence,
+    render_evidence, render_sample,
 };
 use std::{
     thread,
     time::{Duration, Instant},
 };
-use windows_sys::Win32::{Foundation::*, Graphics::Gdi::*};
-fn rgb(value: u32) -> [i32; 3] {
-    [
-        (value & 255) as i32,
-        ((value >> 8) & 255) as i32,
-        ((value >> 16) & 255) as i32,
-    ]
-}
-fn pixel(dc: HDC, target: &Launched, sink: &Underlay, point: POINT) -> Result<[i32; 3]> {
-    identity::owned_point(target, sink, point)?;
-    let color = unsafe { GetPixel(dc, point.x, point.y) };
-    if color == CLR_INVALID {
-        return Err("owned pixel read failed".into());
-    }
-    Ok(rgb(color))
-}
 pub(super) fn verify(target: &Launched, sink: &Underlay, passive: bool) -> Result<()> {
+    target.session.output_flushed()?;
     let rect = identity::fullscreen(target)?;
-    let expected = if passive {
-        [40, 160, 220]
-    } else {
-        [26, 104, 143]
-    };
+    println!(
+        "ACTIVE_RENDER_BOUNDS display=({},{},{},{}) fixture=foreground-white rows2-5 cols2-25; scan step8 top512 unchanged",
+        rect.left, rect.top, rect.right, rect.bottom
+    );
+    let expected = render_evidence::expected_background(passive);
     let deadline = Instant::now() + Duration::from_secs(3);
     loop {
-        let dc = unsafe { GetDC(std::ptr::null_mut()) };
-        if dc.is_null() {
-            return Err("GetDC for owned pixel proof failed".into());
-        }
-        let result = sample(dc, target, sink, &rect);
-        unsafe {
-            ReleaseDC(std::ptr::null_mut(), dc);
-        }
-        let (background, white) = result?;
-        if render_evidence::consistent(background, white, passive) {
+        let sample = render_sample::read(target, sink, &rect)?;
+        let diagnostic = format!(
+            "background={:?} opaque_white_samples={} brightest_rgb={:?} brightest_point={:?} scan_bounds={:?}",
+            sample.background,
+            sample.white,
+            sample.brightest.rgb,
+            sample.brightest.point,
+            sample.bounds
+        );
+        if render_evidence::consistent(sample.background, sample.white, passive) {
             println!(
-                "ACTIVE_RENDER passive={passive} background={background:?} expected={expected:?} tolerance=6 opaque_white_samples={white}"
+                "ACTIVE_RENDER passive={passive} expected={expected:?} tolerance=6 {diagnostic}"
             );
             return Ok(());
         }
         if Instant::now() >= deadline {
-            return Err(format!("renderer compatibility unproven: passive={passive} background={background:?} expected={expected:?} tolerance=6 opaque_white_samples={white}").into());
+            return Err(format!("renderer compatibility unproven: passive={passive} expected={expected:?} tolerance=6 {diagnostic}").into());
         }
         thread::sleep(Duration::from_millis(50));
     }
-}
-fn sample(dc: HDC, target: &Launched, sink: &Underlay, rect: &RECT) -> Result<([i32; 3], usize)> {
-    let background = pixel(
-        dc,
-        target,
-        sink,
-        POINT {
-            x: rect.left + (rect.right - rect.left) * 3 / 4,
-            y: rect.top + (rect.bottom - rect.top) * 3 / 4,
-        },
-    )?;
-    let mut white = 0;
-    for y in (rect.top..rect.top + ((rect.bottom - rect.top) / 2).min(512)).step_by(8) {
-        for x in (rect.left..rect.left + ((rect.right - rect.left) / 3).min(512)).step_by(8) {
-            if pixel(dc, target, sink, POINT { x, y })?
-                .into_iter()
-                .all(|v| v >= 245)
-            {
-                white += 1;
-            }
-        }
-    }
-    Ok((background, white))
 }

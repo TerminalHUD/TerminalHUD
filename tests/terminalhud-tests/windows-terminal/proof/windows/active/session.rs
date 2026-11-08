@@ -10,6 +10,7 @@ pub(super) struct ActiveSession {
     task: PathBuf,
     pub(super) launcher: LauncherProcess,
     shell: Option<OwnedHandle>,
+    proof: Option<SessionProof>,
 }
 impl ActiveSession {
     pub(super) fn new(setup: &Setup, launcher: LauncherProcess) -> Self {
@@ -17,12 +18,23 @@ impl ActiveSession {
             task: setup.task.clone(),
             launcher,
             shell: None,
+            proof: None,
         }
     }
     pub(super) fn handshake(&mut self) -> Result<SessionProof> {
         let (proof, shell) = read_handshake(&self.task)?;
         self.shell = Some(shell);
+        self.proof = Some(proof.clone());
         Ok(proof)
+    }
+    pub(super) fn output_flushed(&self) -> Result<()> {
+        super::output_ready::wait(
+            &self.task,
+            self.proof
+                .as_ref()
+                .ok_or("fixture identity not established")?,
+            || self.alive(),
+        )
     }
     pub(super) fn alive(&self) -> bool {
         self.shell.as_ref().is_some_and(

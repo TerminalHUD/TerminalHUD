@@ -45,6 +45,7 @@ impl Setup {
         if !fixture.is_file()
             || task.join("session-proof.json").exists()
             || task.join("exit.request").exists()
+            || task.join("fixture-output-flushed.json").exists()
         {
             return Err("missing fixture or stale proof session; refusing launch".into());
         }

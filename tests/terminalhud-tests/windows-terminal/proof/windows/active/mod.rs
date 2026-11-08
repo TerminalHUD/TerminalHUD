@@ -3,8 +3,10 @@ mod input;
 mod input_recovery;
 mod launch;
 mod observations;
+mod output_ready;
 mod render;
 mod render_evidence;
+mod render_sample;
 mod session;
 mod states;
 use super::{
