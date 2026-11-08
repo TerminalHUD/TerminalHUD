@@ -89,6 +89,7 @@ are reported and left untouched. This reduces stale-handle risk; separate Win32
 identity queries are not an atomic lifetime guarantee. Namespace and preexisting
 Terminal witness checks run after sink teardown even on a prelaunch refusal.
 
-The next proposed experiment is a single fullscreen `8` diagnostic with these
-phases, after serialized desktop authorization and fresh fixture review. This
-implementation change supplies no new desktop result by itself.
+The single fullscreen `8` diagnostic with these phases was subsequently reviewed
+and executed. It confirmed target activation; see [the feasibility evidence](windows-terminal-feasibility.md).
+Any next control requires its own reviewed arguments, fresh preflight and desktop
+slot authorization; the diagnostic is not a product launch bypass.

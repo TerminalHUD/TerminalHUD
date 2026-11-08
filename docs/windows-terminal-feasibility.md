@@ -39,12 +39,43 @@ transitions, renderer checks or input followed. The nonce fixture exited and
 its dedicated target closed; one preexisting Terminal style/visibility witness
 was unchanged. Main settings and two baselined global fragment files were unchanged.
 
-The [show8 attempt](../tests/terminalhud-tests/windows-terminal/evidence/show8.txt)
+The earlier [show8 attempt](../tests/terminalhud-tests/windows-terminal/evidence/show8.txt)
 is **inconclusive**: it logged only an observation timeout. No creation-intent
 trace, session marker or exit marker appeared; no own fixture/portable process
 remained. Code flow suggests the owned-sink foreground wait timed out before
 launch, but that phase was not explicitly logged. This does not establish whether
 `SW_SHOWNA(8)` preserves foreground. No forced focus or retry was performed.
+
+A subsequent [phased show8 diagnostic](../tests/terminalhud-tests/windows-terminal/evidence/show8-phased.txt)
+reached creation with the owned sink foreground. Its single ordinary foreground
+request returned true and the observed HWND matched the sink before measurement:
+
+```text
+PHASE sink-foreground-result api_return=true observed=18679874
+DIAGNOSTIC_CREATE_INTENT Passive STARTF_USESHOWWINDOW showCommand=8 (ShowNa)
+FOCUS_EVIDENCE before=18679874 sink=18679874 target=5048502 final=5048502 targetSeen=true events=[5048502]
+FOCUS_CLASSIFICATION TargetActivated { observation_invalid: false }
+```
+
+This confirms that `SW_SHOWNA(8)` also fails the Passive foreground requirement
+for the pinned fullscreen fixture. Verified Terminal PID 42056 owned HWND
+5048502; fixture PID 31108 supplied nonce/profile/session proof. The only
+foreground event belonged to that exact target, with no unrelated contamination.
+The diagnostic exited 1 without acquiring a backend or applying input/styles.
+The fixture exited, target closed, owning-thread sink was destroyed and no task
+process remained. Namespace observations, one preexisting Terminal window witness,
+main settings and both global fragment byte hashes/inventories were unchanged.
+
+The run used reviewed diagnostic revision
+`a685dd0251bd0c16b81adea032d5981dafba788d`, freshly verified portable files and
+long-form task path `TerminalHUD-TER9-startup-936bea5c-1738-4f1a-8d49-854b8efb63ff`.
+The synthetic settings SHA256 before launch was
+`1c2a145684f8d781bfed5124269dff957b80a0a9e8294c554f6eb62988cc10bf`;
+fixture executable SHA256 was
+`8427fc7f0b1cba40eae91c5a4988e891e30fa674f3cf01c1fb48fdae703263d6`.
+Terminal rewrote only its synthetic settings during initialization; original and
+normalized bytes, markers and preparation/postrun manifests were retained as
+separate task evidence. This is startup-focus evidence, not renderer acceptance.
 
 Earlier [identity-guard](../tests/terminalhud-tests/windows-terminal/evidence/initial-identity-guard.txt)
 and [foreground-guard](../tests/terminalhud-tests/windows-terminal/evidence/initial-foreground-guard.txt)
@@ -75,8 +106,8 @@ ordinary-profile cloning are also unproven. Unreached renderer/controller/input
 probe code was removed; no terminal policy was moved into portable cores.
 
 Follow-up choices require an explicit plan: investigate an upstream startup fix;
-revisit the inconclusive documented show8 diagnostic with adequate owned foreground
-rights; or obtain a product decision to start Absent and create Active on user
+isolate the fullscreen startup operation with a separately reviewed windowed
+diagnostic control; or obtain a product decision to start Absent and create Active on user
 request. The last changes current requirements and does not prove Passive launch.
 
 
@@ -100,7 +131,8 @@ identity-checked foreground request before starting the Terminal measurement.
 Failure to obtain foreground remains a prelaunch refusal, with namespace and
 external-window checks still performed. Unrelated transient foreground activity
 invalidates observation instead of allowing a false preserved-foreground result.
-These changes do not turn the earlier show8 timeout into launch evidence.
+The earlier timeout remains inconclusive; the subsequent phased show8 result
+above provides separate measured activation evidence.
 
 Removing fullscreen and showing a windowed Terminal before verified presentation
 would not prove the required initial Passive fullscreen behavior. A hidden,
