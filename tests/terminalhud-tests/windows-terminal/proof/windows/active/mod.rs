@@ -1,5 +1,6 @@
 mod identity;
 mod input;
+mod input_recovery;
 mod launch;
 mod observations;
 mod render;

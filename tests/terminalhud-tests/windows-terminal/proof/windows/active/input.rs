@@ -1,7 +1,7 @@
 //! One guarded physical click, routed only to the owned Passive underlay.
 use super::{
     super::{Result, observe, underlay::Underlay},
-    identity,
+    identity, input_recovery,
     launch::Launched,
 };
 use windows_sys::Win32::{
@@ -9,6 +9,7 @@ use windows_sys::Win32::{
     UI::{Input::KeyboardAndMouse::*, WindowsAndMessaging::*},
 };
 pub(super) fn click_sink(target: &Launched, sink: &Underlay) -> Result<()> {
+    require_neutral_buttons()?;
     let rect = identity::fullscreen(target)?;
     let point = POINT {
         x: (rect.left + rect.right) / 2,
@@ -17,10 +18,6 @@ pub(super) fn click_sink(target: &Launched, sink: &Underlay) -> Result<()> {
     identity::owned_point(target, sink, point)?;
     if unsafe { WindowFromPoint(point) } != sink.hwnd() {
         return Err("refusing physical input: hit target is not the owned sink".into());
-    }
-    let mut previous = POINT { x: 0, y: 0 };
-    if unsafe { GetCursorPos(&mut previous) } == 0 {
-        return Err("cannot record cursor before owned click".into());
     }
     let left = unsafe { GetSystemMetrics(SM_XVIRTUALSCREEN) };
     let top = unsafe { GetSystemMetrics(SM_YVIRTUALSCREEN) };
@@ -52,6 +49,10 @@ pub(super) fn click_sink(target: &Launched, sink: &Underlay) -> Result<()> {
     if unsafe { WindowFromPoint(point) } != sink.hwnd() {
         return Err("owned click hit test changed before injection".into());
     }
+    if unsafe { GetForegroundWindow() } != sink.hwnd() {
+        return Err("owned click lost sink foreground before injection".into());
+    }
+    require_neutral_buttons()?;
     let before = sink.clicks();
     let sent = unsafe {
         SendInput(
@@ -60,13 +61,23 @@ pub(super) fn click_sink(target: &Launched, sink: &Underlay) -> Result<()> {
             std::mem::size_of::<INPUT>() as i32,
         )
     };
-    unsafe {
-        SetCursorPos(previous.x, previous.y);
-    }
-    if sent != input.len() as u32 {
-        return Err("owned click SendInput was incomplete".into());
-    }
+    input_recovery::complete(sent, || unsafe {
+        SendInput(
+            1,
+            &mouse(MOUSEEVENTF_LEFTUP),
+            std::mem::size_of::<INPUT>() as i32,
+        ) == 1
+    })?;
     observe::wait(|| sink.clicks() == before + 1)?;
     println!("ACTIVE_PROOF physical Passive click reached owned sink exactly once");
+    Ok(())
+}
+
+fn require_neutral_buttons() -> Result<()> {
+    let states = [VK_LBUTTON, VK_RBUTTON, VK_MBUTTON, VK_XBUTTON1, VK_XBUTTON2]
+        .map(|key| unsafe { GetAsyncKeyState(i32::from(key)) });
+    if !input_recovery::neutral(states) {
+        return Err("owned click requires all mouse buttons released".into());
+    }
     Ok(())
 }

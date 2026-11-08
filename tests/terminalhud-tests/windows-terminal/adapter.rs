@@ -5,6 +5,8 @@ mod active_render;
 mod correlation;
 #[path = "cases/identity.rs"]
 mod identity;
+#[path = "cases/input_recovery.rs"]
+mod input_recovery;
 #[path = "cases/launch.rs"]
 mod launch;
 #[path = "cases/profiles.rs"]

@@ -60,7 +60,12 @@ is allowed during setup; failure is a prelaunch refusal, without focus bypasses.
 The sequence checks primary fullscreen bounds, Active focus/topmost, Passive
 focus restoration/click-through, Hidden memory and same-session survival. Exactly
 one physical mouse click is permitted only after hit-testing/PID verification
-identifies the owned Passive sink. No keyboard/global shortcuts are injected.
+identifies the owned Passive sink. All mouse buttons must be released; a partial
+insertion that leaves this probe's LEFTDOWN unmatched receives exactly one
+compensating LEFTUP, with cleanup failure reported. There is no automatic cursor
+restoration: the proof click can leave the pointer at its click location, avoiding
+overriding a user's later movement or drag. Separate preflight/injection calls
+cannot exclude concurrent user input atomically. No keyboard/global shortcuts are injected.
 Pixel reads cover only the verified Terminal/owned sink; no desktop screenshot
 or unrelated window content is saved. Black background at 35% over RGB
 (40,160,220) should approximate (26,104,143); Passive should preserve the blue.
