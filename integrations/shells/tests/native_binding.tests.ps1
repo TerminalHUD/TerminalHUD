@@ -25,6 +25,25 @@ foreach ($label in @('RevertLine', 'Abort')) {
     Remove-Module $module
     if (![object]::ReferenceEquals($beforeIdentity.handler, (Get-TerminalHUDEscapeIdentity).handler)) { throw 'Unload changed declined custom handler' }
 }
+# Action.Method/Target describe the last multicast invocation only. Preserve
+# composite actions even when their final invocation is a known built-in.
+$type = [Microsoft.PowerShell.PSConsoleReadLine]
+$delegateType = [Action[Nullable[ConsoleKeyInfo],object]]
+foreach ($last in @('RevertLine', 'Abort')) {
+    $first = if ($last -eq 'RevertLine') { 'Abort' } else { 'RevertLine' }
+    $prefix = $type.GetMethod($first, [type[]]@([Nullable[ConsoleKeyInfo]], [object])).CreateDelegate($delegateType)
+    $suffix = $type.GetMethod($last, [type[]]@([Nullable[ConsoleKeyInfo]], [object])).CreateDelegate($delegateType)
+    $composite = [Delegate]::Combine($prefix, $suffix)
+    [Microsoft.PowerShell.PSConsoleReadLine]::SetKeyHandler([string[]]@('Escape'), $composite, $last, 'Composite fixture; never invoked')
+    $beforeIdentity = Get-TerminalHUDEscapeIdentity
+    if (!$beforeIdentity.supported -or $null -eq $beforeIdentity.handler -or $beforeIdentity.builtin) { throw 'Multicast action was mistaken for a built-in' }
+    $rawAction = $beforeIdentity.handler.GetType().GetField('Action').GetValue($beforeIdentity.handler)
+    if ($rawAction.GetInvocationList().Length -ne 2 -or $rawAction.Method.Name -cne $last) { throw 'Multicast fixture precondition failed' }
+    $module = Import-Module $path -PassThru
+    if (![object]::ReferenceEquals($beforeIdentity.handler, (Get-TerminalHUDEscapeIdentity).handler)) { throw 'Multicast handler was overwritten' }
+    Remove-Module $module
+    if (![object]::ReferenceEquals($beforeIdentity.handler, (Get-TerminalHUDEscapeIdentity).handler)) { throw 'Unload changed declined multicast handler' }
+}
 Set-PSReadLineKeyHandler -Chord Escape -Function RevertLine
 $module = Import-Module $path -PassThru
 Set-PSReadLineKeyHandler -Chord Escape -BriefDescription TerminalHUDPassive -ScriptBlock { }
@@ -39,4 +58,4 @@ foreach ($mode in @('Emacs', 'Vi')) {
     if ($after -cne $before) { throw "Native $mode bindings changed" }
     Remove-Module $module
 }
-Write-Output 'Native PSReadLine binding, restoration, colliding-label identity and Emacs/Vi preservation passed'
+Write-Output 'Native PSReadLine binding, restoration, colliding-label/multicast identity and Emacs/Vi preservation passed'

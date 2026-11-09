@@ -2,12 +2,14 @@
 # Read the actual Escape handler in the verified 2.0-2.4 layouts. Never write
 # private state; unsupported layouts leave bindings untouched.
 function Get-TerminalHUDEscapeIdentity {
+    $failure = 'version'
     try {
         $type = [Microsoft.PowerShell.PSConsoleReadLine]
         $modules = @(Get-Module PSReadLine)
         if ($modules.Count -ne 1) { throw 'Ambiguous PSReadLine module' }
         $version = $modules[0].Version
         if ($version.Major -ne 2 -or $version.Minor -gt 4) { throw 'Unsupported PSReadLine version' }
+        $failure = 'layout'
         $static = [Reflection.BindingFlags]'Static,Public,NonPublic'
         $instance = [Reflection.BindingFlags]'Instance,Public,NonPublic'
         $singletonField = $type.GetField('_singleton', $static)
@@ -33,7 +35,7 @@ function Get-TerminalHUDEscapeIdentity {
         if ($null -ne $handler) {
             $action = $actionField.GetValue($handler)
             $block = $scriptField.GetValue($handler)
-            if ($null -eq $block -and $null -eq $action.Target) {
+            if ($null -eq $block -and $action.GetInvocationList().Length -eq 1 -and $null -eq $action.Target) {
                 foreach ($name in @('RevertLine', 'Abort')) {
                     $method = $type.GetMethod($name, [type[]]@([Nullable[ConsoleKeyInfo]], [object]))
                     if ($action.Method.Equals($method)) { $builtin = $name; break }
@@ -42,6 +44,6 @@ function Get-TerminalHUDEscapeIdentity {
         }
         return [pscustomobject]@{ supported = $true; handler = $handler; builtin = $builtin }
     } catch {
-        return [pscustomobject]@{ supported = $false; handler = $null; builtin = $null }
+        return [pscustomobject]@{ supported = $false; handler = $null; builtin = $null; failure = $failure }
     }
 }
