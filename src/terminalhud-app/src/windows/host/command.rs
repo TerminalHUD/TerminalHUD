@@ -16,6 +16,14 @@ impl HostContext {
         }
         let code = if self.quitting.get() {
             ReplyCode::ShuttingDown
+        } else if self.requires_configuration
+            && self.configuration.borrow().is_none()
+            && matches!(
+                command,
+                Command::InteractionToggle | Command::VisibilityToggle
+            )
+        {
+            ReplyCode::TransitionFailed
         } else {
             // Arm the fallback before accepting an IPC quit; no successful quit
             // can strand an event loop if the reply worker subsequently fails.

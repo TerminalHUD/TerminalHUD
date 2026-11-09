@@ -76,8 +76,12 @@ impl HostContext {
             self.menu_commands
                 .set(self.menu_commands.get().saturating_add(1));
         }
+        let initial = self.requires_configuration && self.configuration.borrow().is_none();
         let code = match self.apply_configuration() {
             Ok(effect) => {
+                if initial {
+                    self.initialize_real();
+                }
                 let (code, message) = match effect {
                     LaunchPreferenceEffect::Applied => (ReplyCode::Ok, "Configuration applied"),
                     LaunchPreferenceEffect::RequiresRelaunch => (
@@ -103,6 +107,18 @@ impl HostContext {
             let _ = sender.send(self.reply(code, false));
         }
     }
+    pub(super) fn initialize_configuration(&self) -> bool {
+        let result = config::settings_path()
+            .and_then(|path| config::load_or_create(&path))
+            .and_then(|candidate| {
+                let launch = self
+                    .launch_preferences
+                    .as_ref()
+                    .ok_or("production launch preferences are unavailable")?;
+                self.apply_candidate(candidate, launch.as_ref())
+            });
+        self.report_configuration(result.map(|_| "Startup configuration applied".into()))
+    }
     fn apply_configuration(&self) -> Result<LaunchPreferenceEffect, String> {
         let launch = self
             .launch_preferences
@@ -117,15 +133,16 @@ impl HostContext {
         candidate: Configuration,
         launch: &dyn super::launch_preferences::LaunchPreferences,
     ) -> Result<LaunchPreferenceEffect, String> {
-        let previous = self.configuration.borrow();
-        if previous
-            .as_ref()
-            .is_none_or(|old| old.start_with_windows() != candidate.start_with_windows())
-        {
-            return Err(
-                "startup registration service is unavailable; configuration was not applied".into(),
-            );
+        if self.startup_registration.borrow().is_none() {
+            let startup = crate::windows::startup::StartupRegistration::for_current_install()
+                .map_err(|error| format!("startup registration unavailable: {error}"))?;
+            *self.startup_registration.borrow_mut() = Some(startup);
         }
+        let startup = self.startup_registration.borrow();
+        let startup = startup.as_ref().expect("startup registration initialized");
+        let startup_change = startup
+            .prepare(candidate.start_with_windows())
+            .map_err(|error| format!("startup registration preparation failed: {error}"))?;
         let prepared_launch = launch.prepare(&candidate)?;
         let mut hotkeys = self.hotkeys.borrow_mut();
         let hotkeys = hotkeys.as_mut().ok_or("hotkey service unavailable")?;
@@ -136,23 +153,32 @@ impl HostContext {
                 return Err(error);
             }
         };
+        let startup_applied = match startup.commit(&startup_change) {
+            Ok(applied) => applied,
+            Err(error) => {
+                let cleanup = hotkeys.cancel(prepared_keys);
+                return Err(format!(
+                    "startup registration commit failed: {error}; hotkey cleanup: {cleanup:?}; inspect startup registration"
+                ));
+            }
+        };
         let effect = match prepared_launch.commit() {
             Ok(effect) => effect,
             Err(error) => {
                 let cleanup = hotkeys.cancel(prepared_keys);
                 return Err(format!(
-                    "launch preference commit failed: {error}; hotkey cleanup: {cleanup:?}; inspect runtime state"
+                    "launch preference commit failed: {error}; startup registration committed (changed={}); hotkey cleanup: {cleanup:?}; inspect runtime state",
+                    startup_applied.changed
                 ));
             }
         };
         if let Err(error) = hotkeys.commit(prepared_keys, &candidate) {
             self.hotkey_error.set(u32::MAX);
             return Err(format!(
-                "{error}; launch preferences have changed; inspect runtime state"
+                "{error}; startup registration and launch preferences have changed; inspect runtime state"
             ));
         }
         self.hotkey_error.set(0);
-        drop(previous);
         *self.configuration.borrow_mut() = Some(candidate);
         Ok(effect)
     }

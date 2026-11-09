@@ -19,5 +19,7 @@ mod file_read;
 mod file_type;
 mod platform;
 pub(crate) use file_create::ensure_file;
+#[cfg(any(windows, test))]
+pub(crate) use file_create::load_or_create;
 pub(crate) use file_read::validate_file;
 pub(crate) use platform::{open_document, settings_path};

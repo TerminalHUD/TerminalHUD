@@ -98,3 +98,22 @@ fn corrected_file_can_be_validated_after_a_failure() {
     let config = crate::config::validate_file(&fixture.path).unwrap();
     assert_eq!(config.toggle_interaction().to_string(), "Ctrl+A");
 }
+
+#[test]
+fn startup_creates_only_missing_defaults_and_preserves_invalid_existing_bytes() {
+    let fixture = Fixture::new();
+    let defaults = crate::config::load_or_create(&fixture.path).unwrap();
+    assert_eq!(defaults, terminalhud_core::config::Configuration::default());
+    fixture.write(b"invalid existing configuration");
+    assert!(crate::config::load_or_create(&fixture.path).is_err());
+    assert_eq!(
+        fs::read(&fixture.path).unwrap(),
+        b"invalid existing configuration"
+    );
+    fixture.write(b"{\"version\":1,\"startup\":{\"startWithWindows\":false}}");
+    assert!(
+        !crate::config::load_or_create(&fixture.path)
+            .unwrap()
+            .start_with_windows()
+    );
+}
