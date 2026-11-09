@@ -13,7 +13,11 @@ pub fn run(args: Vec<String>) -> Result<(), String> {
             options.instance = REAL_INSTANCE.into();
             options.development = Some(args.next().ok_or("missing development manifest")?.into());
         }
-        _ => return Err("explicit --prototype or --development MANIFEST required".into()),
+        None => {
+            options.mode = Mode::Real;
+            options.instance = REAL_INSTANCE.into();
+        }
+        _ => return Err("unknown host argument".into()),
     }
     while let Some(arg) = args.next() {
         if options.mode == Mode::Real {

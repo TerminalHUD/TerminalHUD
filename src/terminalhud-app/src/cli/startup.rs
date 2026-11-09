@@ -28,15 +28,9 @@ pub(super) fn ensure_running(args: &super::Arguments) -> Result<Reply, String> {
             OsString::from("--instance"),
             OsString::from(instance),
         ]);
-    } else {
+    } else if let Some(manifest) = &args.development {
         command.push("--development".into());
-        command.push(
-            args.development
-                .as_ref()
-                .ok_or("missing manifest")?
-                .as_os_str()
-                .into(),
-        );
+        command.push(manifest.as_os_str().into());
     }
     let name = format!(
         "TerminalHUD-development-start-{}-{}.log",

@@ -17,6 +17,14 @@ fn run_with_config(
     local: impl FnOnce(ConfigCommand) -> Result<String, String>,
 ) -> Result<String, String> {
     #[cfg(windows)]
+    if args
+        .first()
+        .is_some_and(|arg| arg == "--installed-session-bridge")
+    {
+        crate::windows::installed::run_bridge(&args[1..])?;
+        return Ok(String::new());
+    }
+    #[cfg(windows)]
     if args.first().is_some_and(|arg| arg == "--session-bridge") {
         crate::windows::development::run_bridge(&args[1..])?;
         return Ok(String::new());
@@ -25,23 +33,32 @@ fn run_with_config(
     if args.action == Action::Help {
         return Ok(USAGE.into());
     }
+    if matches!(args.action, Action::ProfilePlan | Action::ProfileApply) {
+        #[cfg(windows)]
+        {
+            return crate::windows::installed::profile_command(args.action == Action::ProfileApply);
+        }
+        #[cfg(not(windows))]
+        {
+            return Err("installed profiles require native Windows".into());
+        }
+    }
     if let Action::Config(command) = args.action {
         return local(command);
     }
     #[cfg(windows)]
     {
         use crate::windows::ipc;
-        let reply = match args.action {
-            Action::Run => startup::ensure_running(&args)?,
-            Action::Command(command) => {
-                ipc::call(&args.instance, command).map_err(|e| e.to_string())?
-            }
-            Action::Help | Action::Config(_) => unreachable!(),
-        };
+        let reply = runtime_reply(&args, startup::ensure_running, |instance, request| {
+            ipc::call_request(instance, request).map_err(|e| e.to_string())
+        })?;
         if reply.mode != args.mode {
             return Err("runtime mode mismatch; command outcome is ambiguous".into());
         }
-        if reply.code != crate::protocol::ReplyCode::Ok {
+        if !matches!(
+            reply.code,
+            crate::protocol::ReplyCode::Ok | crate::protocol::ReplyCode::RequiresRelaunch
+        ) {
             return Err(format!(
                 "command rejected: {:?}; {}",
                 reply.code,
@@ -53,6 +70,23 @@ fn run_with_config(
     #[cfg(not(windows))]
     {
         Err("the prototype tray/IPC host currently requires native Windows".into())
+    }
+}
+
+#[cfg(any(windows, test))]
+fn runtime_reply(
+    args: &Arguments,
+    start: impl FnOnce(&Arguments) -> Result<crate::protocol::Reply, String>,
+    send: impl FnOnce(&str, crate::protocol::Request) -> Result<crate::protocol::Reply, String>,
+) -> Result<crate::protocol::Reply, String> {
+    use crate::protocol::Request;
+    match args.action {
+        Action::Run => start(args),
+        Action::ReloadConfiguration => send(&args.instance, Request::ReloadConfiguration),
+        Action::Command(command) => send(&args.instance, Request::Command(command)),
+        Action::Help | Action::Config(_) | Action::ProfilePlan | Action::ProfileApply => {
+            unreachable!()
+        }
     }
 }
 

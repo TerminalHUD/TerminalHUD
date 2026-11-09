@@ -4,7 +4,7 @@ impl HostContext {
     pub(super) fn initialize_real(&self) {
         // Setup is complete before the first target mutation. A launch failure
         // keeps its recovery state owned by this tray and readiness reports it.
-        self.busy.set(true);
+        let already_busy = self.busy.replace(true);
         if let Err(error) = self
             .controller
             .borrow_mut()
@@ -15,6 +15,6 @@ impl HostContext {
             );
             *self.last_command_error.borrow_mut() = Some(error);
         }
-        self.busy.set(false);
+        self.busy.set(already_busy);
     }
 }

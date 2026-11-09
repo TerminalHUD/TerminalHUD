@@ -10,6 +10,8 @@ mod backend;
 mod error;
 mod hotkeys;
 
-pub use backend::{Focus, LaunchedWindow, Launcher, Original, Target, WindowsBackend};
+pub use backend::{
+    Focus, LaunchedWindow, Launcher, Original, RecoveryClaim, RecoveryWatch, Target, WindowsBackend,
+};
 pub use error::Error;
 pub use hotkeys::{HotkeyBinding, HotkeyFailure, HotkeyRegistrationError, Hotkeys};

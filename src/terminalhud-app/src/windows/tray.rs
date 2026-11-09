@@ -32,6 +32,16 @@ pub(super) fn tray_for_mode(
         ))
         .map_err(io::Error::other)?;
     }
+    if mode == crate::mode::Mode::Real {
+        for (id, label) in [
+            ("config-open", "Open Configuration"),
+            ("config-validate", "Validate Configuration"),
+            ("config-reload", "Reload Configuration"),
+        ] {
+            menu.append(&MenuItem::with_id(id, label, true, None))
+                .map_err(io::Error::other)?;
+        }
+    }
     menu.append(&PredefinedMenuItem::separator())
         .map_err(io::Error::other)?;
     menu.append(&MenuItem::with_id(
@@ -46,6 +56,16 @@ pub(super) fn tray_for_mode(
     ))
     .map_err(io::Error::other)?;
     MenuEvent::set_event_handler(Some(move |event: MenuEvent| {
+        let action = match event.id().as_ref() {
+            "config-open" => Some(UiMessage::OpenConfiguration),
+            "config-validate" => Some(UiMessage::ValidateConfiguration),
+            "config-reload" => Some(UiMessage::ReloadConfiguration { reply: None }),
+            _ => None,
+        };
+        if let Some(action) = action {
+            let _ = ui.send(action);
+            return;
+        }
         let command = match event.id().as_ref() {
             "interaction" => Command::InteractionToggle,
             "visibility" => Command::VisibilityToggle,
@@ -76,9 +96,9 @@ pub(super) fn tray_for_mode(
         .with_tooltip(if mode == crate::mode::Mode::Prototype {
             "TerminalHUD prototype — no terminal attached"
         } else if hotkey_error != 0 {
-            "TerminalHUD development — hotkeys unavailable; use tray or CLI status"
+            "TerminalHUD — hotkeys unavailable; use tray or CLI status"
         } else {
-            "TerminalHUD development"
+            "TerminalHUD"
         })
         .with_icon(icon)
         .build()

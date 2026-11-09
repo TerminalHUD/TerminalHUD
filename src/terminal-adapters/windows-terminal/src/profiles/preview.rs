@@ -36,7 +36,6 @@ impl Catalog {
         profile.insert("hidden".into(), json!(false));
         profile.insert("elevate".into(), json!(false));
         profile.insert("opacity".into(), json!(active_opacity));
-        profile.insert("useAcrylic".into(), json!(false));
         let mut unfocused = match profile.remove("unfocusedAppearance") {
             Some(Value::Object(value)) => value,
             None | Some(Value::Null) => Map::new(),

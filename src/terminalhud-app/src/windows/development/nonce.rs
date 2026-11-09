@@ -1,7 +1,7 @@
 use super::error;
 use std::io;
 use terminalhud_windows_terminal::Guid;
-pub(super) fn fresh() -> io::Result<Guid> {
+pub(in crate::windows) fn fresh() -> io::Result<Guid> {
     let mut value = windows_sys::core::GUID::from_u128(0);
     if unsafe { windows_sys::Win32::System::Com::CoCreateGuid(&mut value) } < 0 {
         return Err(error("CoCreateGuid failed"));

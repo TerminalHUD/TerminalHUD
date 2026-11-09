@@ -5,7 +5,7 @@ fn modes_are_explicit_and_cannot_route_prototype_to_real_owner() {
     let real = parse(vec!["status".into()]).unwrap();
     assert_eq!(real.mode, Mode::Real);
     assert_eq!(real.instance, REAL_INSTANCE);
-    assert!(parse(vec!["run".into()]).is_err());
+    assert_eq!(parse(vec!["run".into()]).unwrap().action, Action::Run);
     assert!(
         parse(vec![
             "--prototype".into(),
@@ -47,4 +47,40 @@ fn only_run_accepts_the_explicit_development_manifest() {
         ])
         .is_err()
     );
+}
+
+#[test]
+fn passive_never_starts_the_gui_when_the_owner_is_absent() {
+    let args = parse(vec!["passive".into()]).unwrap();
+    let result = runtime_reply(
+        &args,
+        |_| panic!("passive must not start a host"),
+        |instance, request| {
+            assert_eq!(instance, REAL_INSTANCE);
+            assert_eq!(
+                request,
+                crate::protocol::Request::Command(terminalhud_core::Command::Passive)
+            );
+            Err("owner unavailable".into())
+        },
+    );
+    assert_eq!(result.unwrap_err(), "owner unavailable");
+}
+
+#[test]
+fn installed_profile_setup_is_explicit() {
+    assert_eq!(
+        parse(vec!["profiles".into(), "plan".into()])
+            .unwrap()
+            .action,
+        Action::ProfilePlan
+    );
+    assert_eq!(
+        parse(vec!["profiles".into(), "apply".into()])
+            .unwrap()
+            .action,
+        Action::ProfileApply
+    );
+    assert!(parse(vec!["profiles".into()]).is_err());
+    assert!(parse(vec!["profiles".into(), "apply".into(), "extra".into()]).is_err());
 }
