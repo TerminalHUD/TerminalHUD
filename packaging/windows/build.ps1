@@ -44,6 +44,12 @@ try {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot "$name.ps1") -Destination (Join-Path $installer "$name.ps1")
     }
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination (Join-Path $installer 'README.md')
+    $shellSource = Join-Path $repository 'integrations\shells'
+    $shellDestination = Join-Path $destination 'integrations\shells'
+    $null = New-Item -ItemType Directory -Path $shellDestination -Force
+    foreach ($name in @('manage.ps1', 'Profile.ps1', 'Snippet.ps1', 'README.md', 'bash', 'powershell')) {
+        Copy-Item -LiteralPath (Join-Path $shellSource $name) -Destination (Join-Path $shellDestination $name) -Recurse
+    }
     $runtimeDestination = Join-Path $destination 'runtime'
     $null = New-Item -ItemType Directory -Path $runtimeDestination
     foreach ($file in Get-ChildItem -LiteralPath $runtime -Recurse -Force) {
