@@ -5,6 +5,7 @@ mod handshake;
 mod launcher;
 mod namespaces;
 mod nonce;
+mod runtime_profiles;
 mod temporary;
 pub use bridge::run_bridge;
 pub(super) use config::Configuration;

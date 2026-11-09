@@ -1,11 +1,8 @@
 use super::{Command, REAL_INSTANCE, Result, ipc};
 use std::{
     fs,
-    os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle},
+    os::windows::io::{AsRawHandle, OwnedHandle},
     path::{Path, PathBuf},
-    process::{Command as ProcessCommand, Stdio},
-    thread,
-    time::{Duration, Instant},
 };
 use terminalhud_app::{
     mode::Mode,
@@ -32,61 +29,24 @@ pub(super) struct Owner {
 }
 impl Owner {
     pub(super) fn start(manifest: &Path) -> Result<Self> {
-        let cli = std::env::current_exe()?
-            .parent()
-            .ok_or("example directory missing")?
-            .parent()
-            .ok_or("debug directory missing")?
-            .join("terminalhud.exe");
-        let mut child = ProcessCommand::new(cli)
-            .arg("--development")
-            .arg(manifest)
-            .arg("run")
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
-        let deadline = Instant::now() + Duration::from_secs(45);
-        while child.try_wait()?.is_none() {
-            if Instant::now() >= deadline {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err("console startup timed out; inspect real owner before cleanup".into());
-            }
-            thread::sleep(Duration::from_millis(10));
+        let startup = super::startup::launch(manifest)?;
+        // Establish the expected same-connection status before constructing a
+        // guard whose Drop can send Quit. Replacements are never adopted.
+        let reply = ipc::call_for_process(REAL_INSTANCE, startup.pid, Command::Status)?;
+        if reply.mode != Mode::Real || reply.process_id != startup.pid {
+            return Err("initial status owner/mode mismatch; no owner adopted".into());
         }
-        let output = child.wait_with_output()?;
-        println!("APP_CLI {}", String::from_utf8_lossy(&output.stdout).trim());
-        let stderr = String::from_utf8(output.stderr)?;
-        let log = PathBuf::from(
-            stderr
-                .lines()
-                .find_map(|line| line.strip_prefix("TerminalHUD development diagnostics: "))
-                .ok_or("new real owner did not return its diagnostic path")?,
-        );
-        let reply = ipc::call(REAL_INSTANCE, Command::Status)?;
-        if reply.mode != Mode::Real {
-            return Err("owner is not a real composition".into());
-        }
-        let handle = unsafe {
-            OpenProcess(
-                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
-                0,
-                reply.process_id,
-            )
-        };
-        if handle.is_null() {
-            return Err("cannot retain real owner".into());
-        }
+        let _retained_cli = startup.cli;
         let owner = Self {
-            pid: reply.process_id,
-            process: unsafe { OwnedHandle::from_raw_handle(handle) },
-            log,
+            pid: startup.pid,
+            process: startup.process,
+            log: startup.log,
         };
         owner.ensure()?;
-        if !output.status.success() || reply.code != ReplyCode::Ok {
+        if !startup.success || reply.code != ReplyCode::Ok {
             return Err(format!(
-                "real startup failed: {stderr}; {}",
+                "real startup failed: {}; {}",
+                startup.stderr,
                 fs::read_to_string(&owner.log)?
             )
             .into());

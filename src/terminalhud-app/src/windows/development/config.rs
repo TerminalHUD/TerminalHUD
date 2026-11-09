@@ -60,25 +60,16 @@ impl Configuration {
 }
 fn validate_settings(settings: &Value, profile: &Guid, fallback: &str) -> io::Result<()> {
     if settings["defaultProfile"] != profile.as_str()
-        || settings["startupActions"] != ""
+        || !(settings["startupActions"].is_null() || settings["startupActions"] == "")
         || settings["firstWindowPreference"] != "defaultProfile"
     {
         return Err(error("unsafe development startup settings"));
     }
-    let profiles = settings["profiles"]["list"]
-        .as_array()
-        .ok_or_else(|| error("profile list missing"))?;
-    if profiles.len() != 1
-        || profiles[0]["guid"] != profile.as_str()
-        || profiles[0].get("source").is_some()
-        || profiles[0].get("updates").is_some()
-    {
-        return Err(error("expected one explicit development profile"));
-    }
-    for item in [&settings["profiles"]["defaults"], &profiles[0]] {
+    let hud = super::runtime_profiles::hud_profile(settings, profile)?;
+    for (defaults, item) in [(true, &settings["profiles"]["defaults"]), (false, hud)] {
         if item["elevate"] != false
             || item["connectionType"] != "{00000000-0000-0000-0000-000000000000}"
-            || item["commandline"] != fallback
+            || !(item["commandline"] == fallback || (defaults && item.get("commandline").is_none()))
             || item["opacity"] != 35
             || item["useAcrylic"] != false
             || item["suppressApplicationTitle"] != true

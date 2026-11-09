@@ -1,0 +1,88 @@
+{
+  "$help": "https://aka.ms/terminal-documentation",
+  "$schema": "https://aka.ms/terminal-profiles-schema",
+  "actions": [],
+  "defaultProfile": "{e8cff6f0-cd23-4e9d-b65b-58ff2e11c4d6}",
+  "disabledProfileSources": [
+    "Windows.Terminal.PowershellCore",
+    "Windows.Terminal.Wsl",
+    "Windows.Terminal.Azure",
+    "Windows.Terminal.VisualStudio",
+    "Windows.Terminal.SSH",
+    "Microsoft.WSL"
+  ],
+  "firstWindowPreference": "defaultProfile",
+  "keybindings": [],
+  "newTabMenu": [
+    {
+      "type": "remainingProfiles"
+    }
+  ],
+  "profiles": {
+    "defaults": {
+      "antialiasingMode": "grayscale",
+      "background": "#000000",
+      "backgroundImage": null,
+      "closeOnExit": "always",
+      "connectionType": "{00000000-0000-0000-0000-000000000000}",
+      "elevate": false,
+      "font": {
+        "face": "Consolas",
+        "size": 16
+      },
+      "foreground": "#FFFFFF",
+      "opacity": 35,
+      "padding": "0",
+      "startingDirectory": "C:\\TerminalHUD-test-runtime",
+      "suppressApplicationTitle": true,
+      "unfocusedAppearance": {
+        "backgroundImageOpacity": 0,
+        "opacity": 0,
+        "useAcrylic": false
+      },
+      "useAcrylic": false
+    },
+    "list": [
+      {
+        "antialiasingMode": "grayscale",
+        "background": "#000000",
+        "backgroundImage": null,
+        "closeOnExit": "always",
+        "commandline": "bridge --session-bridge",
+        "connectionType": "{00000000-0000-0000-0000-000000000000}",
+        "elevate": false,
+        "font": {
+          "face": "Consolas",
+          "size": 16
+        },
+        "foreground": "#FFFFFF",
+        "guid": "{e8cff6f0-cd23-4e9d-b65b-58ff2e11c4d6}",
+        "hidden": false,
+        "name": "HUD test fixture",
+        "opacity": 35,
+        "padding": "0",
+        "startingDirectory": "C:\\TerminalHUD-test-runtime",
+        "suppressApplicationTitle": true,
+        "unfocusedAppearance": {
+          "backgroundImageOpacity": 0,
+          "opacity": 0,
+          "useAcrylic": false
+        },
+        "useAcrylic": false
+      },
+      {
+        "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
+        "hidden": false,
+        "name": "Windows PowerShell"
+      },
+      {
+        "guid": "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}",
+        "hidden": false,
+        "name": "Command Prompt"
+      }
+    ]
+  },
+  "schemes": [],
+  "startupActions": null,
+  "themes": []
+}

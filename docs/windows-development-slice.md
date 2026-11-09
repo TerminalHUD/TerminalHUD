@@ -27,7 +27,7 @@ synthetic profile and the following startup fields:
 ```json
 {
   "defaultProfile": "{FRESH-PROFILE-GUID}",
-  "startupActions": "",
+  "startupActions": null,
   "firstWindowPreference": "defaultProfile",
   "disabledProfileSources": [
     "Windows.Terminal.PowershellCore", "Windows.Terminal.Wsl",
@@ -38,13 +38,13 @@ synthetic profile and the following startup fields:
 }
 ```
 
-Replace the placeholder with a fresh real GUID. Put the same safe fields in
-`profiles.defaults` and its sole `profiles.list` entry, and give the entry that
-GUID and a descriptive name. The fields are:
+Replace the placeholder with a fresh real GUID. Put these same safe appearance/connection fields in `profiles.defaults` and
+its sole `profiles.list` entry, and give the entry that GUID and a descriptive
+name. Put `commandline` only in the explicit entry; Terminal strips that invalid
+defaults property when normalizing settings. The shared fields are:
 
 ```json
 {
-  "commandline": "\"C:\\absolute-native-build\\debug\\terminalhud.exe\" --session-bridge",
   "connectionType": "{00000000-0000-0000-0000-000000000000}",
   "elevate": false,
   "opacity": 35,
@@ -56,12 +56,17 @@ GUID and a descriptive name. The fields are:
 }
 ```
 
-The bridge path must be the console binary beside the shell binary used to run
+The explicit profile also needs `commandline` equal to
+`"C:\absolute-native-build\debug\terminalhud.exe" --session-bridge` (with those
+path quotes encoded in JSON). The bridge path must be the console binary beside the shell binary used to run
 the app. Neither profile may inherit an elevated or non-ConPTY connection; the
-explicit profile must have no `source` or `updates`. The argumentless fallback
-bridge deliberately refuses to start a shell. Each real launch supplies fresh
-owned nonce/profile/session arguments instead. Runtime validation checks these
-preconditions and rechecks known external namespaces before every launch.
+explicit profile must have no `source` or `updates`. The argumentless fallback bridge deliberately refuses to start a shell. Each real launch supplies fresh
+owned nonce/profile/session arguments instead. Runtime validation checks these preconditions and rechecks known external
+namespaces before every launch. It recognizes Terminal normalization only for
+empty/null/omitted startup actions, removed invalid defaults command line, and
+the exact observed PowerShell/Command Prompt inbox GUID/name/hidden-only records.
+Unknown or changed entries remain refused; the HUD/default identity, explicit
+fallback, connection/elevation and appearance checks remain required.
 Unknown namespaces or discovery failure refuse launch. As with the accepted
 adapter proof, this is not an atomic boundary against concurrent configuration
 changes by programs under the same account.
@@ -117,6 +122,13 @@ failures keep the tray alive and remain a failed status until another successful
 state-changing command. CLI errors exit 2. Initial startup prints its private
 native diagnostics-file path to stderr; acquisition logs record the owned session
 and original style/visibility before mutation.
+
+GUI spawning explicitly inherits only owned NUL/diagnostic handles, so a live
+GUI cannot hold a caller's captured CLI stdout/stderr pipes open. The proof uses
+private create-new capture files and bounded finite snapshots independently;
+owner adoption requires its retained CLI's reported PID, direct parent and
+creation interval, expected GUI image/SID/session, and a same-connection expected
+PID status reply before any cleanup guard can send commands.
 
 The selected `Win+Backtick` and `Win+Shift+Backtick` bindings are unchanged. Both
 are registered on the UI thread through the backend API. A thread-only native

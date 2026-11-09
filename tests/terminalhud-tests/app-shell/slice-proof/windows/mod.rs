@@ -10,6 +10,8 @@ mod foreground_setup;
 mod lifecycle;
 #[path = "../../../windows-terminal/proof/windows/observe.rs"]
 mod observe;
+mod startup;
+mod startup_identity;
 mod target;
 #[path = "../../../windows-terminal/proof/windows/underlay/mod.rs"]
 mod underlay;
