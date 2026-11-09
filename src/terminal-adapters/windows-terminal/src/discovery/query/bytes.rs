@@ -24,7 +24,9 @@ impl IdentityBuffer {
         }
         let bytes = &self.bytes()[start..];
         let words: Vec<_> = bytes
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|v| u16::from_ne_bytes([v[0], v[1]]))
             .collect();
         if words.first() == Some(&0) {
