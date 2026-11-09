@@ -54,6 +54,8 @@ try {
         else { $null = New-Item -ItemType Directory -Path (Split-Path -Parent $targetPath) -Force; [IO.File]::Copy($file.FullName, $targetPath, $false) }
     }
     if (!@(Get-ChildItem -LiteralPath (Join-Path $runtimeDestination 'LICENSES') -Recurse -File).Count) { throw 'Runtime license texts missing' }
+    $identity = [pscustomobject]@{ version = $app.version; source_commit = $commit; build_id = $buildId; target = $Target }
+    [IO.File]::WriteAllText((Join-Path $destination 'BUILD-INFO.json'), ($identity | ConvertTo-Json), (New-Object Text.UTF8Encoding($false)))
     $files = @(Get-ChildItem -LiteralPath $destination -Recurse -File | Sort-Object FullName | ForEach-Object {
         [pscustomobject]@{ path = $_.FullName.Substring($destination.TrimEnd('\').Length + 1).Replace('\', '/'); sha256 = Get-FileDigest $_.FullName }
     })

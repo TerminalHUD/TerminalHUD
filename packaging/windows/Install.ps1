@@ -44,6 +44,7 @@ function Invoke-Install([string] $Package, [string] $Root, [scriptblock] $Create
     $plan.receipt.active_build = $nextActive
     $plan.receipt.installed = $true
     Save-Receipt $Root $plan.receipt
-    Install-Shortcut $Root $plan.receipt $CreateShortcut
+    try { Install-Shortcut $Root $plan.receipt $CreateShortcut }
+    catch { throw "Payload installed but shortcut activation failed; ownership receipt retained. Plan uninstall/recovery before retrying. $($_.Exception.Message)" }
     return $plan
 }

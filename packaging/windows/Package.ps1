@@ -13,7 +13,7 @@ function Read-Package([string] $Package) {
         $seen[$file.path.ToLowerInvariant()] = $true
         if ($file.sha256 -cnotmatch '^[a-f0-9]{64}$' -or (Get-FileDigest $path) -cne $file.sha256) { throw "Package digest mismatch: $path" }
     }
-    foreach ($required in @('terminalhud.exe', 'terminalhud-shell.exe', 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'runtime/runtime.json')) {
+    foreach ($required in @('terminalhud.exe', 'terminalhud-shell.exe', 'BUILD-INFO.json', 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'runtime/runtime.json')) {
         if (!$seen.ContainsKey($required.ToLowerInvariant())) { throw "Missing package file: $required" }
     }
     if (!@($manifest.files | Where-Object { $_.path.StartsWith('runtime/LICENSES/', [StringComparison]::Ordinal) }).Count) { throw 'Runtime license texts missing' }

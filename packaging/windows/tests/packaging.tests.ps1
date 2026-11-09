@@ -11,7 +11,7 @@ try {
     $create = { param($path, $target) [IO.File]::WriteAllText($path, $target) }
     $package = Join-Path $temp 'package'; $root = Join-Path $temp 'user\install'
     $null = New-Item -ItemType Directory -Path (Join-Path $package 'runtime\LICENSES') -Force
-    $paths = @('terminalhud.exe', 'terminalhud-shell.exe', 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'runtime/runtime.json', 'runtime/LICENSES/LICENSE')
+    $paths = @('terminalhud.exe', 'terminalhud-shell.exe', 'BUILD-INFO.json', 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'runtime/runtime.json', 'runtime/LICENSES/LICENSE')
     foreach ($path in $paths) { [IO.File]::WriteAllText((Join-Path $package $path), "fixture:$path") }
     $files = @($paths | ForEach-Object { [pscustomobject]@{ path = $_; sha256 = Get-FileDigest (Join-Path $package $_) } })
     $manifest = [pscustomobject]@{ schema_version = 1; product = 'TerminalHUD'; version = '0.1.0'; source_commit = ('a' * 40); build_id = 'fixture1'; files = $files }
@@ -29,12 +29,12 @@ try {
     Reject { Invoke-Install $package $root $create }
     Assert ((Get-FileDigest $settings) -ceq $settingsBefore) 'Settings changed'
     $oldCli = Join-Path $root 'versions\fixture1\terminalhud.exe'
+    $manifest.build_id = 'fixture2'; Write-Manifest
     $shortcutBytes = [IO.File]::ReadAllBytes($script:fixtureShortcut)
     [IO.File]::WriteAllText($script:fixtureShortcut, 'modified shortcut')
     Reject { New-InstallPlan $package $root }
     [IO.File]::WriteAllBytes($script:fixtureShortcut, $shortcutBytes)
     Reject { Invoke-OperationLock $root { Invoke-OperationLock $root { throw 'Must never enter second operation' } } }
-    $manifest.build_id = 'fixture2'; Write-Manifest
     $null = Invoke-OperationLock $root { Invoke-Install $package $root $create }
     Assert (Test-Path -LiteralPath $oldCli) 'Upgrade removed old bridge'
     Assert ([IO.File]::ReadAllText($script:fixtureShortcut).Contains('fixture2')) 'Shortcut did not upgrade'
@@ -63,6 +63,14 @@ try {
     $null = New-Item -ItemType Junction -Path $junction -Target $package
     Reject { Resolve-PayloadPath $temp 'junction/terminalhud.exe' }
     Remove-Item -LiteralPath $junction
+    $manifest.build_id = 'fixture3'; Write-Manifest
+    Reject { Invoke-Install $package $root { param($path, $target) throw 'Injected shortcut failure' } }
+    Assert (Test-Path -LiteralPath (Join-Path $root 'versions\fixture3\terminalhud.exe')) 'Partial installation ownership lost'
+    $null = Read-Receipt $root
+    [IO.File]::WriteAllText($script:fixtureShortcut, 'unowned shortcut')
+    Reject { New-InstallPlan $package (Join-Path $temp 'fresh-root') }
+    Assert ([IO.File]::ReadAllText($script:fixtureShortcut) -ceq 'unowned shortcut') 'Unowned shortcut changed'
+    Remove-Item -LiteralPath $script:fixtureShortcut
     $manifest.files[0].sha256 = '0' * 64; Write-Manifest
     Reject { New-InstallPlan $package (Join-Path $temp 'new-root') }
     $unownedRoot = Join-Path $temp 'unowned-root'; $null = New-Item -ItemType Directory -Path $unownedRoot

@@ -18,7 +18,8 @@ payload, and its required license texts in `LICENSES/`. Packaging copies it
 without selecting or downloading a Terminal distribution. The production
 launcher owns the runtime manifest schema; a placeholder manifest does not make
 a usable package. The builder requires committed tracked source, identifies the
-source commit and development version, gathers Rust dependency license texts,
+source commit and development version in `BUILD-INFO.json`, gathers Rust
+dependency license texts,
 and refuses existing outputs. Review runtime redistribution rights and payload
 content before distribution. No release tag or version is published.
 
