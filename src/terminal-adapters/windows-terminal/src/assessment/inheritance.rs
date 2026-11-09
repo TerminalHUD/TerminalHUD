@@ -11,6 +11,7 @@ pub(super) fn lookup(layers: &[&Layer], key: &str) -> PropertyExpectation {
                 .values
                 .get(key)
                 .map(|value| supplied(layer, key, value))
+                .or_else(|| legacy_opacity(&layer.values, key))
         })
         .unwrap_or(PropertyExpectation::Unresolved(
             UnresolvedValue::MissingBaseLayer,
@@ -45,6 +46,9 @@ pub(super) fn unfocused_value(layers: &[&Layer], key: &str) -> PropertyExpectati
             if let Some(value) = object.get(key) {
                 return supplied(layer, key, value);
             }
+            if let Some(unresolved) = legacy_opacity(object, key) {
+                return unresolved;
+            }
             return match layer.provenance {
                 Provenance::UserProfile => lookup(&layers[index..], key),
                 // Defaults and fragments have no other supplied focused parents.
@@ -53,4 +57,15 @@ pub(super) fn unfocused_value(layers: &[&Layer], key: &str) -> PropertyExpectati
         }
     }
     PropertyExpectation::Unresolved(UnresolvedValue::MissingBaseLayer)
+}
+
+fn legacy_opacity(
+    object: &serde_json::Map<String, Value>,
+    key: &str,
+) -> Option<PropertyExpectation> {
+    // AppearanceConfig.cpp layers acrylicOpacity before opacity into the same
+    // setting. Do not skip a higher-priority legacy value to use a lower modern value.
+    (key == "opacity" && object.contains_key("acrylicOpacity")).then_some(
+        PropertyExpectation::Unresolved(UnresolvedValue::UnsupportedForm),
+    )
 }

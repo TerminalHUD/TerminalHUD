@@ -67,6 +67,17 @@ pub(super) fn validate(profile: &Map<String, Value>, label: &str) -> Result<(), 
 }
 
 fn validate_appearance(object: &Map<String, Value>, label: &str) -> Result<(), AssessmentFinding> {
+    // Legacy conversion is unsupported. Reject nonnumeric forms even when modern
+    // opacity is also supplied, because Terminal reads the legacy key first.
+    if object
+        .get("acrylicOpacity")
+        .is_some_and(|v| v.as_f64().is_none())
+    {
+        return Err(finding(
+            RefusalReason::UnsupportedForm,
+            format!("{label}.acrylicOpacity"),
+        ));
+    }
     for (_, _, key) in APPEARANCE {
         if let Some(value) = object.get(*key) {
             validate_value(key, value, label)?;
@@ -83,7 +94,9 @@ fn validate_value(key: &str, value: &Value, label: &str) -> Result<(), Assessmen
     let valid = match key {
         "elevate" | "hidden" | "useAcrylic" => value.is_boolean(),
         "connectionType" => value.as_str().is_some_and(|s| Guid::parse(s).is_ok()),
-        "opacity" => value.as_f64().is_some_and(|v| (0.0..=100.0).contains(&v)),
+        "opacity" => value
+            .as_f64()
+            .is_some_and(|v| v.fract() == 0.0 && (0.0..=100.0).contains(&v)),
         "backgroundImageOpacity" => value.as_f64().is_some_and(|v| (0.0..=1.0).contains(&v)),
         "environment" => value
             .as_object()

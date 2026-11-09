@@ -2,6 +2,8 @@ use serde_json::{Value, json};
 use terminalhud_windows_terminal::*;
 #[path = "evidence.rs"]
 mod evidence;
+#[path = "opacity.rs"]
+mod opacity;
 #[path = "precedence.rs"]
 mod precedence;
 #[path = "sources.rs"]

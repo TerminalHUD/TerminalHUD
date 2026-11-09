@@ -94,7 +94,8 @@ Supported properties are deliberately limited:
 | `environment` | One atomic object of string values; no per-variable merge or expansion |
 | `elevate`, `hidden`, `useAcrylic` | Booleans |
 | `connectionType` | GUID string; nonzero values produce a refusal |
-| `opacity`, `backgroundImageOpacity` | Numbers in 0–100 and 0–1 respectively |
+| `opacity` | Integral percentages in 0–100 (including integral real notation such as `35.0`); fractional percentages are invalid |
+| `backgroundImageOpacity` | Numbers in 0–1 |
 | `backgroundImage`, `colorScheme` | Raw strings; resources, scheme definitions and color contents are not resolved |
 | `unfocusedAppearance` | Object containing the five appearance fields above |
 
@@ -104,7 +105,15 @@ recursively merged. A direct `unfocusedAppearance: {}` therefore inherits its
 own focused opacity rather than a fragment's unfocused zero. A defaults-owned
 unfocused object inherits defaults-focused fields; a fragment-owned object
 inherits fragment-focused fields, still marked as candidates because an
-unsupplied inbox unfocused object could win first. This follows pinned
+unsupplied inbox unfocused object could win first. Legacy `acrylicOpacity` also affects opacity in the pin. An alias without a
+same-layer modern opacity makes that layer's focused/unfocused opacity explicitly
+unsupported, rather than falling through to a lower-priority modern value. A
+higher-priority modern value, or a same-layer modern value beside a numeric alias,
+can win; legacy conversion itself is not modeled. Nonnumeric aliases are refused.
+See [the pinned appearance parser](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalSettingsModel/AppearanceConfig.cpp#L124-L125)
+and [percentage converter](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalSettingsModel/TerminalSettingsSerializationHelpers.h).
+
+The owning-layer inheritance follows pinned
 [Profile.cpp `LayerJson` and `_FinalizeInheritance`](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalSettingsModel/Profile.cpp#L211-L265),
 [profile parent precedence](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp#L1063-L1106)
 and [inbox/user defaults finalization](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp#L485-L499).
