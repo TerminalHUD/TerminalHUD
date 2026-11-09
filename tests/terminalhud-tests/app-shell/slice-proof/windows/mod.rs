@@ -21,9 +21,8 @@ mod underlay;
 mod witness;
 pub(super) enum Completion {
     FullProof,
-    StartupPass,
-    StartupFailure,
-    Inconclusive,
+    Startup(crate::observation::decision::Report),
+    PreconditionRefused,
 }
 pub(super) fn run(args: Vec<String>) -> Result<Completion> {
     if args.first().is_some_and(|a| a == "--startup-observe") && args.len() == 3 {

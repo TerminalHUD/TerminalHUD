@@ -310,7 +310,9 @@ samples, gaps over 100 ms, missing stages or exhausted observation capacity make
 the trial **INCONCLUSIVE**. Expected owned focus stages remain distinct from a
 third window. Raw native success/failure is reported separately, without treating
 an inconclusive observation as product success or failure. Startup assessment
-ends before Quit; activity during later cleanup cannot explain an earlier timeout.
+ends before Quit and is frozen before cleanup runs. The final report carries
+startup measurement, fixture disposition and overall exit separately; late
+activity or cleanup failure cannot relabel an earlier measured success/failure.
 
 Cleanup attempts normal authenticated Quit only for the verified retained owner,
 without blind retries, then verifies original styles/visibility and the same live

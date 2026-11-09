@@ -5,7 +5,10 @@ use super::{
     Completion, Result, client, foreground_setup, monitor::Monitor, target::Launched,
     underlay::Underlay, witness,
 };
-use crate::observation::Stage;
+use crate::observation::{
+    Stage,
+    decision::{self, Fixture},
+};
 use std::{collections::HashSet, path::Path};
 use terminalhud_core::integration::State;
 use terminalhud_windows_terminal::{Guid, native};
@@ -53,7 +56,7 @@ fn measure(
         println!(
             "APP_STARTUP_PRECONDITION_REFUSED {error}; no Terminal launched, no product result"
         );
-        return Ok(Completion::Inconclusive);
+        return Ok(Completion::PreconditionRefused);
     }
     let sink_id = state::sink_identity(sink)?;
     let start_us = monitor.mark(Stage::Startup)?;
@@ -66,7 +69,7 @@ fn measure(
         println!(
             "APP_STARTUP_PRECONDITION_REFUSED observer baseline unavailable/unstable; no Terminal launched"
         );
-        return Ok(Completion::Inconclusive);
+        return Ok(Completion::PreconditionRefused);
     }
     let owner = client::Owner::start_observed(manifest)?;
     let target = Launched::read(&owner, terminal, profile, before);
@@ -101,21 +104,24 @@ fn measure(
         owner.startup_failure
     );
     let measured_pass = active_reply && native_active == Ok(true);
-    let disposed = finish::finish(&owner, target.as_ref().ok(), monitor, sink_id, start_us)?;
-    if !assessment
-        .as_ref()
-        .is_ok_and(|value| value.label() == "NO_DISTURBANCE_OBSERVED")
-        || !disposed
-    {
+    let report = decision::complete(assessment.as_ref().ok(), measured_pass, |measurement| {
         println!(
-            "APP_STARTUP_INCONCLUSIVE raw_native_success={measured_pass}; no product pass/failure attribution; full lifecycle proof unclaimed"
+            "APP_STARTUP_MEASURED outcome={measurement:?} raw_native_success={measured_pass}; frozen before cleanup, full lifecycle proof unclaimed"
         );
-        Ok(Completion::Inconclusive)
-    } else if measured_pass {
-        println!("APP_STARTUP_ONLY_PASS no disturbance observed; not a full app-slice-proof pass");
-        Ok(Completion::StartupPass)
-    } else {
-        println!("APP_STARTUP_OBSERVED_FAILURE no disturbance observed; cause unproven; no retry");
-        Ok(Completion::StartupFailure)
-    }
+        match finish::finish(&owner, target.as_ref().ok(), monitor, sink_id, start_us) {
+            Ok(true) => Fixture::Closed,
+            Ok(false) => Fixture::Preserved,
+            Err(error) => {
+                eprintln!("APP_FIXTURE_CLEANUP_FAILED {error}; startup measurement unchanged");
+                Fixture::CleanupFailed
+            }
+        }
+    });
+    println!(
+        "APP_STARTUP_REPORT measurement={:?} fixture={:?} overall_exit={}; cleanup does not explain or relabel startup",
+        report.measurement,
+        report.fixture,
+        report.exit_code()
+    );
+    Ok(Completion::Startup(report))
 }
