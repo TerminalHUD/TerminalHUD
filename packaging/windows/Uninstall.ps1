@@ -28,8 +28,10 @@ function New-CleanupPlan([string] $Root) {
         foreach ($file in $version.files) {
             $path = Resolve-PayloadPath $Root $file.path
             if (!(Test-Path -LiteralPath $path)) { continue }
-            if ((Get-FileDigest $path) -ceq $file.sha256) { $remove += $file.path }
-            else { $preserve += $file.path }
+            try {
+                if ((Get-FileDigest $path) -ceq $file.sha256) { $remove += $file.path }
+                else { $preserve += $file.path }
+            } catch { $preserve += $file.path }
         }
     }
     return [pscustomobject]@{ operation = 'cleanup'; root = $Root; remove = $remove; preserve = $preserve }

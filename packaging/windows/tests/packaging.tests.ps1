@@ -29,6 +29,11 @@ try {
     Reject { Invoke-Install $package $root $create }
     Assert ((Get-FileDigest $settings) -ceq $settingsBefore) 'Settings changed'
     $oldCli = Join-Path $root 'versions\fixture1\terminalhud.exe'
+    $shortcutBytes = [IO.File]::ReadAllBytes($script:fixtureShortcut)
+    [IO.File]::WriteAllText($script:fixtureShortcut, 'modified shortcut')
+    Reject { New-InstallPlan $package $root }
+    [IO.File]::WriteAllBytes($script:fixtureShortcut, $shortcutBytes)
+    Reject { Invoke-OperationLock $root { Invoke-OperationLock $root { throw 'Must never enter second operation' } } }
     $manifest.build_id = 'fixture2'; Write-Manifest
     $null = Invoke-OperationLock $root { Invoke-Install $package $root $create }
     Assert (Test-Path -LiteralPath $oldCli) 'Upgrade removed old bridge'
@@ -47,10 +52,17 @@ try {
     $script:fakeStartup = $null
     [IO.File]::WriteAllText($oldCli, 'modified-user-file')
     $unowned = Join-Path $root 'versions\fixture1\user.txt'; [IO.File]::WriteAllText($unowned, 'user')
-    $result = Invoke-Cleanup $root
+    $lockedRelative = 'versions/fixture2/LICENSE'
+    $locked = [IO.File]::Open((Join-Path $root $lockedRelative), [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::None)
+    try { $result = Invoke-Cleanup $root } finally { $locked.Dispose() }
+    Assert ($result.pending -contains $lockedRelative) 'In-use file was not reported pending'
     Assert ($result.pending -contains 'versions/fixture1/terminalhud.exe') 'Modified owned file was removed'
     Assert (Test-Path -LiteralPath $unowned) 'Unowned file removed'
     Assert ((Get-FileDigest $settings) -ceq $settingsBefore) 'Uninstall changed settings'
+    $junction = Join-Path $temp 'junction'
+    $null = New-Item -ItemType Junction -Path $junction -Target $package
+    Reject { Resolve-PayloadPath $temp 'junction/terminalhud.exe' }
+    Remove-Item -LiteralPath $junction
     $manifest.files[0].sha256 = '0' * 64; Write-Manifest
     Reject { New-InstallPlan $package (Join-Path $temp 'new-root') }
     $unownedRoot = Join-Path $temp 'unowned-root'; $null = New-Item -ItemType Directory -Path $unownedRoot

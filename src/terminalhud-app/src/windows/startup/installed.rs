@@ -1,7 +1,7 @@
 use super::StartupError;
 use super::paths::{regular_path, safe_build};
 use super::receipt::Receipt;
-use std::{fs, path::PathBuf};
+use std::{fs, io::Read, path::PathBuf};
 
 #[derive(Debug)]
 pub(super) struct Installed {
@@ -52,16 +52,17 @@ impl Installed {
         for path in [&executable, &gui, &receipt_path] {
             regular_path(path)?;
         }
-        if fs::metadata(&receipt_path)
+        let mut bytes = Vec::new();
+        fs::File::open(receipt_path)
             .map_err(|e| e.to_string())?
-            .len()
-            > 1024 * 1024
-        {
+            .take(1024 * 1024 + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|e| e.to_string())?;
+        if bytes.len() > 1024 * 1024 {
             return Err("installation receipt exceeds 1 MiB".to_string().into());
         }
-        let receipt: Receipt =
-            serde_json::from_slice(&fs::read(receipt_path).map_err(|e| e.to_string())?)
-                .map_err(|e| format!("invalid installation receipt: {e}"))?;
+        let receipt: Receipt = serde_json::from_slice(&bytes)
+            .map_err(|e| format!("invalid installation receipt: {e}"))?;
         if !receipt.owns_gui(build) {
             return Err("installation receipt does not own active GUI executable"
                 .to_string()
@@ -100,3 +101,7 @@ impl Installed {
         })
     }
 }
+
+#[cfg(test)]
+#[path = "installed_tests.rs"]
+mod tests;

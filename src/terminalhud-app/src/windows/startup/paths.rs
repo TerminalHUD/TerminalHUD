@@ -2,7 +2,31 @@ use super::StartupError;
 use std::{fs, os::windows::fs::MetadataExt, path::Path};
 
 pub(super) fn safe_build(build: &str) -> bool {
-    !build.is_empty()
+    !matches!(
+        build.to_ascii_uppercase().as_str(),
+        "CON"
+            | "PRN"
+            | "AUX"
+            | "NUL"
+            | "COM1"
+            | "COM2"
+            | "COM3"
+            | "COM4"
+            | "COM5"
+            | "COM6"
+            | "COM7"
+            | "COM8"
+            | "COM9"
+            | "LPT1"
+            | "LPT2"
+            | "LPT3"
+            | "LPT4"
+            | "LPT5"
+            | "LPT6"
+            | "LPT7"
+            | "LPT8"
+            | "LPT9"
+    ) && !build.is_empty()
         && build.len() <= 100
         && build
             .bytes()
