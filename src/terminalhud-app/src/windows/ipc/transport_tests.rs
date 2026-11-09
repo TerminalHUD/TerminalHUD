@@ -72,3 +72,41 @@ fn real_reply_wait_handles_acquisition_delay_then_ack_and_reports_disconnect_amb
         worker.join().unwrap();
     }
 }
+
+#[test]
+fn retained_owner_mismatch_refuses_before_sending_any_command_bytes() {
+    let identity = Identity::current().unwrap();
+    let instance = format!(
+        "owner-{:x}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let server = Server::bind(&identity, &instance).unwrap();
+    let worker = thread::spawn(move || {
+        if let Err(error) = accept::accept(server.pipe.raw(), server.stop.raw()) {
+            // The rejected client can close before the server thread accepts.
+            assert!(error.to_string().contains("os error 232"), "{error}");
+            return;
+        }
+        let mut request = [0u8; crate::protocol::REQUEST_LEN];
+        match read::read(server.pipe.raw(), &mut request, None) {
+            Ok(count) => assert_eq!(
+                count, 0,
+                "unexpected command bytes reached replacement owner"
+            ),
+            Err(error) => {
+                assert!(
+                    error.to_string().contains("os error 109")
+                        || error.to_string().contains("os error 233")
+                )
+            }
+        }
+    });
+    let wrong = std::process::id().checked_add(1).unwrap();
+    let error = client::call_for_process(&instance, wrong, Command::Quit).unwrap_err();
+    assert_eq!(error.kind(), std::io::ErrorKind::PermissionDenied);
+    assert!(error.to_string().contains("command not sent"));
+    worker.join().unwrap();
+}

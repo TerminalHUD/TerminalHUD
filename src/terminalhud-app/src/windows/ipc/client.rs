@@ -66,6 +66,15 @@ pub(super) fn exchange_with_timeout(
     frame: &[u8],
     timeout: u32,
 ) -> io::Result<Reply> {
+    exchange_to_process(identity, instance, frame, timeout, None)
+}
+fn exchange_to_process(
+    identity: &Identity,
+    instance: &str,
+    frame: &[u8],
+    timeout: u32,
+    expected_process: Option<u32>,
+) -> io::Result<Reply> {
     if frame.len() > crate::protocol::REQUEST_LEN {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -73,6 +82,18 @@ pub(super) fn exchange_with_timeout(
         ));
     }
     let pipe = connect(identity, instance, Duration::from_secs(2))?;
+    if let Some(expected) = expected_process {
+        let mut actual = 0;
+        if unsafe { GetNamedPipeServerProcessId(pipe.raw(), &mut actual) } == 0 {
+            return Err(last("GetNamedPipeServerProcessId expected owner"));
+        }
+        if actual != expected {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "connected pipe owner differs from retained expected process; command not sent",
+            ));
+        }
+    }
     write(pipe.raw(), frame, None)?;
     let mut response = [0; REPLY_LEN];
     let count = read_with_timeout(pipe.raw(), &mut response, None, timeout).map_err(|error| {
@@ -95,5 +116,26 @@ pub fn call(instance: &str, command: Command) -> io::Result<Reply> {
         &Identity::current()?,
         instance,
         &protocol::encode_request(command),
+    )
+}
+
+/// Send only to a retained expected owner, checked on the authenticated connection
+/// before any command bytes. The caller must retain that process's live identity.
+pub fn call_for_process(
+    instance: &str,
+    expected_process: u32,
+    command: Command,
+) -> io::Result<Reply> {
+    let timeout = if instance == crate::mode::REAL_INSTANCE {
+        22_000
+    } else {
+        super::IO_TIMEOUT
+    };
+    exchange_to_process(
+        &Identity::current()?,
+        instance,
+        &protocol::encode_request(command),
+        timeout,
+        Some(expected_process),
     )
 }

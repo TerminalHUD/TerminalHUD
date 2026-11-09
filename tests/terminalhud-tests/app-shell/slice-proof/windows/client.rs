@@ -103,7 +103,7 @@ impl Owner {
     }
     pub(super) fn call(&self, command: Command) -> Result<Reply> {
         self.ensure()?;
-        let reply = ipc::call(REAL_INSTANCE, command)?;
+        let reply = ipc::call_for_process(REAL_INSTANCE, self.pid, command)?;
         if reply.process_id != self.pid || reply.mode != Mode::Real {
             return Err("reply owner/mode changed".into());
         }
