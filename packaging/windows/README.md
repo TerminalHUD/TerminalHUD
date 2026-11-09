@@ -120,3 +120,8 @@ portable policy harness can also run with:
 rustc --edition 2024 --test packaging/windows/tests/startup_policy.rs -o /tmp/terminalhud-startup-tests
 /tmp/terminalhud-startup-tests
 ```
+
+The package also includes the explicit shell integration manager at
+`integrations/shells/manage.ps1`. Installing the application does not change shell
+profiles. See the [shell integration guide](../../integrations/shells/README.md)
+for preview, backup, install and remove operations.
