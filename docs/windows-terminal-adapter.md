@@ -150,6 +150,82 @@ evidence; the API has no host assertion or launch-permit status. Elevated or
 nonzero-connection supplied values (including possible fragment candidates)
 produce additional typed refusals. This API establishes no installed readiness.
 
+## Registered package discovery
+
+On Windows, `discover_registered_terminals()` queries both current-user package
+families and returns `RegisteredTerminalDiscovery`. Stable uses
+`Microsoft.WindowsTerminal_8wekyb3d8bbwe`; Preview uses
+`Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe`. These family names and expected
+settings locations are documented by [Microsoft's Terminal installation guide](https://learn.microsoft.com/en-us/windows/terminal/install#settings-json-file).
+The [pinned package manifest](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/CascadiaPackage/Package.appxmanifest)
+identifies the Stable package and the `WindowsTerminal.exe` component. The
+executable path here is a layout expectation, not a manifest or file check.
+
+Each channel independently reports an API failure or all returned registrations;
+an empty successful list means that family had no registrations at query time.
+No version wins automatically. Each candidate retains the queried full/family
+name, channel, parsed identity (name, publisher ID, resource ID, package version,
+architecture), registered installation path and expected application paths.
+Identity, installation and Local App Data failures remain separate, so an
+unavailable installation path does not erase independently available identity or
+settings-location metadata. Package version is distinct from executable file
+version and running Terminal version; neither of the latter is inspected.
+
+Discovery uses documented direct APIs:
+
+- [GetPackagesByPackageFamily](https://learn.microsoft.com/en-us/windows/win32/api/appmodel/nf-appmodel-getpackagesbypackagefamily)
+  enumerates registrations for the current user.
+- [PackageIdFromFullName](https://learn.microsoft.com/en-us/windows/win32/api/appmodel/nf-appmodel-packageidfromfullname)
+  with `PACKAGE_INFORMATION_BASIC` parses identity into aligned owned storage.
+  It does not load the package or establish a running process's identity.
+- [GetPackagePathByFullName](https://learn.microsoft.com/en-us/windows/win32/api/appmodel/nf-appmodel-getpackagepathbyfullname)
+  supplies the registered installation root.
+- [SHGetKnownFolderPath](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetknownfolderpath)
+  resolves `FOLDERID_LocalAppData` with the current-user token and
+  `KF_FLAG_DONT_VERIFY | KF_FLAG_NO_PACKAGE_REDIRECTION`. These
+  [flags](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/ne-shlobj_core-known_folder_flag)
+  avoid existence checks and packaged-caller private redirection. Neither
+  `CREATE` nor `INIT` is used. Task memory is freed on success and failure.
+
+For an empty-resource x86, x64 or ARM64 package with the expected package name and
+publisher ID, expected paths are `<registered root>/WindowsTerminal.exe` and
+`<LocalAppData>/Packages/<family>/LocalState/settings.json`. Resources, bundle
+identities (including resource ID `~`), neutral and unknown architectures retain
+identity metadata but receive `UnsupportedApplicationPackage` for application
+paths. Other raw architecture values are preserved. A name/publisher mismatch is
+a typed identity error. This subset does not claim application-package type,
+manifest validity, file existence, signature, hash or binary architecture checks.
+
+Each variable-size API query allows at most four calls, including initial sizing.
+Limits are 128 package names, 65,536 UTF-16 units for the family-name buffer,
+65,536 bytes for an identity buffer and 32,768 UTF-16 units for paths. Required
+sizes are capped before allocation. Returned sizes/counts are checked against
+owned storage; pointers are converted to bounded aligned offsets before string
+reads. Strings must terminate inside the reported prefix and decode as UTF-16;
+duplicate names, malformed replies, exhausted retries and native errors remain
+explicit failures. Identity storage is `u64`-aligned before the API call; no
+borrowed native pointer escapes. The known-folder API instead owns its allocation
+and guarantees a terminated string; its owner is retained through a capped scan
+and freed exactly once.
+
+This is a non-atomic observation of two registered package families, not a complete
+installation inventory or a stable snapshot. Packages can disappear or change
+between queries. It reads no settings, manifests, fragments or executable bytes,
+uses no PATH lookup or command execution, and does not inventory unpackaged
+installs, package extensions, providers, policy, host processes or cached catalogs.
+It changes no files, registrations, processes, windows or existing launch gate.
+It neither authenticates an executable nor establishes runtime recognition,
+installed readiness, safe fallback or permission to launch.
+
+Portable injected-response tests exercise buffers and partial metadata failures.
+Windows-only tests enumerate read-only without requiring Terminal installed and
+parse a synthetic package identity using the documented basic identity API. They
+launch no Terminal or shell. A native isolated feature check is
+`cargo check -p terminalhud-windows-terminal --lib --locked`; adapter Windows API
+features are declared directly, independently of app feature unification.
+Actual user's-host probing requires separate exact-source/runner review; no such
+host probe is performed by this change.
+
 ## Focused checks
 
 After the workspace's locked dependency fetch, run:

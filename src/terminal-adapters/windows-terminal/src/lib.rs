@@ -1,6 +1,7 @@
 //! Read-only Windows Terminal profile previews and isolated launch plans.
 //! The application composition layer selects and bridges its window backend.
 mod assessment;
+mod discovery;
 mod error;
 mod guid;
 mod launch;
@@ -16,4 +17,12 @@ pub use assessment::{
     AssessmentFinding, ExpectedProfile, ExpectedProperty, FallbackAssessment, ProfileAssessment,
     Property, PropertyExpectation, Provenance, RefusalReason, SuppliedFragment, SuppliedSnapshot,
     UnresolvedValue, assess_snapshot,
+};
+
+#[cfg(windows)]
+pub use discovery::discover_registered_terminals;
+pub use discovery::{
+    DiscoveryFailure, DiscoveryOperation, MalformedReply, PackageArchitecture, RegisteredChannel,
+    RegisteredPackageCandidate, RegisteredPackageIdentity, RegisteredTerminalDiscovery,
+    TerminalChannel,
 };
