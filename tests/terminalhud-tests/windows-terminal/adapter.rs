@@ -1,6 +1,8 @@
 use terminalhud_windows_terminal::*;
 #[path = "cases/active_render.rs"]
 mod active_render;
+#[path = "cases/assessment/mod.rs"]
+mod assessment;
 #[path = "cases/correlation.rs"]
 mod correlation;
 #[path = "cases/identity.rs"]

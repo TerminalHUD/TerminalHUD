@@ -1,0 +1,23 @@
+{
+  // This is supplied preview-like data, never installed by the tests.
+  "profiles": [{
+    "guid": "{01234567-89ab-4cde-8fab-012345678901}",
+    "name": "HUD — supplied shell",
+    "commandline": "pwsh.exe -NoLogo",
+    "startingDirectory": "%USERPROFILE%",
+    "environment": {"HUD_FIXTURE": "fragment"},
+    "elevate": false,
+    "connectionType": "{00000000-0000-0000-0000-000000000000}",
+    "hidden": false,
+    "opacity": 35,
+    "useAcrylic": false,
+    "backgroundImage": "none",
+    "backgroundImageOpacity": 0,
+    "colorScheme": "Campbell",
+    "unfocusedAppearance": {
+      "opacity": 0,
+      "useAcrylic": false,
+      "backgroundImageOpacity": 0,
+    },
+  }],
+}
