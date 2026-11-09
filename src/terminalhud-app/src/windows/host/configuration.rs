@@ -36,6 +36,9 @@ impl HostContext {
         }
     }
     pub(super) fn open_configuration(&self) {
+        if self.quitting.get() {
+            return;
+        }
         let result = config::settings_path().and_then(|path| {
             config::ensure_file(&path)?;
             config::open_document(&path)?;
@@ -47,6 +50,9 @@ impl HostContext {
         }
     }
     pub(super) fn validate_configuration(&self) {
+        if self.quitting.get() {
+            return;
+        }
         let result = config::settings_path().and_then(|path| {
             config::validate_file(&path)?;
             Ok(format!("Valid configuration: {}", path.display()))
@@ -59,6 +65,17 @@ impl HostContext {
         }
     }
     pub(super) fn reload_configuration(&self, reply: Option<mpsc::SyncSender<Reply>>) {
+        if self.quitting.get() {
+            if let Some(sender) = reply {
+                let _ = sender.send(self.reply(ReplyCode::ShuttingDown, false));
+            }
+            return;
+        }
+        self.sequence.set(self.sequence.get().saturating_add(1));
+        if reply.is_none() {
+            self.menu_commands
+                .set(self.menu_commands.get().saturating_add(1));
+        }
         let code = match self.apply_configuration() {
             Ok(effect) => {
                 let (code, message) = match effect {
