@@ -48,6 +48,29 @@ jobs:
         run: cargo fetch --locked
       - name: Check workspace architecture
         run: python scripts/check_workspace.py
+      - name: Test Bash Escape in owned PTYs
+        if: runner.os == 'Linux'
+        run: python3 integrations/shells/tests/bash_pty.py
+      - name: Test shell profile operations on PowerShell
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./integrations/shells/tests/profiles.tests.ps1
+          ./integrations/shells/tests/line_editor.tests.ps1
+      - name: Test native PSReadLine metadata
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./integrations/shells/tests/native_binding.tests.ps1
+      - name: Test shell profile operations on inbox Windows PowerShell
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          ./integrations/shells/tests/profiles.tests.ps1
+          ./integrations/shells/tests/line_editor.tests.ps1
+      - name: Test native inbox PSReadLine metadata
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./integrations/shells/tests/native_binding.tests.ps1
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Lint all workspace targets
