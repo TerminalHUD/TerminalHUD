@@ -132,7 +132,10 @@ fn file_uri_path(uri: &str) -> Result<String, NativeError> {
     if !uri.to_ascii_lowercase().starts_with("file:///") {
         return Err(NativeError::Unsupported("unsupported fragment file URI"));
     }
-    let bytes = uri.as_bytes();
+    // Uri.Path excludes raw query/fragment components; encoded delimiters are
+    // part of the filename and are decoded only after this split.
+    let path_component = uri.split(['?', '#']).next().unwrap_or(uri);
+    let bytes = path_component.as_bytes();
     let mut decoded = Vec::new();
     let mut index = 8;
     while index < bytes.len() {
@@ -185,6 +188,18 @@ mod tests {
         assert_eq!(
             media("file:///C:/images/my%20wall.png", base, false).unwrap(),
             "C:/images/my wall.png"
+        );
+        assert_eq!(
+            media("file:///C:/images/wall.png#preview", base, false).unwrap(),
+            "C:/images/wall.png"
+        );
+        assert_eq!(
+            media("file:///C:/images/wall.png?query", base, false).unwrap(),
+            "C:/images/wall.png"
+        );
+        assert_eq!(
+            media("file:///C:/images/wall%23preview.png", base, false).unwrap(),
+            "C:/images/wall#preview.png"
         );
         assert!(media("file://server/share/wall.png", base, false).is_err());
         let mut values = serde_json::json!({"bellSound":"bell.wav"})
