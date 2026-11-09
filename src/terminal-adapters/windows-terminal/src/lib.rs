@@ -11,7 +11,10 @@ mod profiles;
 pub use error::Error;
 pub use guid::Guid;
 pub use launch::{LaunchIdentity, LaunchPlan, SessionProof, WindowCandidate, correlate};
-pub use profiles::{Catalog, FragmentPreview, Profile};
+pub use profiles::{
+    Catalog, FragmentPreview, GeneratedProfile, OwnedProfileEntry, PreparedProfile, Profile,
+    ProfileFragment, ProfilePatch, plan_profile_patch, remove_owned_profile,
+};
 
 pub use assessment::{
     AssessmentFinding, ExpectedProfile, ExpectedProperty, FallbackAssessment, ProfileAssessment,
