@@ -6,13 +6,25 @@ use std::collections::HashSet;
 /// Inspect the lossless AST first: converting directly to Value discards duplicate keys.
 pub(super) fn parse(text: &str, label: &str) -> Result<Map<String, Value>, AssessmentFinding> {
     let text = text.trim_start_matches('\u{feff}');
-    let parsed = jsonc_parser::parse_to_ast(text, &Default::default(), &Default::default())
+    let options = jsonc_parser::ParseOptions {
+        allow_comments: true,
+        allow_trailing_commas: true,
+        allow_loose_object_property_names: false,
+        allow_missing_commas: false,
+        allow_single_quoted_strings: false,
+        allow_hexadecimal_numbers: false,
+        allow_unary_plus_numbers: false,
+        allow_bare_decimal_point_numbers: false,
+        allow_non_finite_numbers: false,
+        allow_extended_string_escapes: false,
+    };
+    let parsed = jsonc_parser::parse_to_ast(text, &Default::default(), &options)
         .map_err(|_| finding(RefusalReason::MalformedDocument, label))?;
     let value = parsed
         .value
         .ok_or_else(|| finding(RefusalReason::MalformedDocument, label))?;
     check_duplicates(&value, label)?;
-    let value: Value = jsonc_parser::parse_to_serde_value(text, &Default::default())
+    let value: Value = jsonc_parser::parse_to_serde_value(text, &options)
         .map_err(|_| finding(RefusalReason::MalformedDocument, label))?;
     value
         .as_object()

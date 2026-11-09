@@ -167,3 +167,21 @@ fn unresolved_unselected_provider_is_still_reported_and_other_namespaces_are_uns
         RefusalReason::UnsupportedNamespace
     ));
 }
+
+#[test]
+fn json5_and_missing_comma_extensions_are_not_accepted_as_jsonc() {
+    for text in [
+        r#"{"profiles":[] "extra":true}"#,
+        "{profiles:[]}",
+        "{'profiles':[]}",
+        r#"{"extra":0x35}"#,
+        r#"{"extra":+35}"#,
+        r#"{"extra":.5}"#,
+        r#"{"extra":NaN}"#,
+        r#"{"extra":"\x41"}"#,
+    ] {
+        let result = assess(text, &[fragment(HUD)], 1, None);
+        assert!(result.selected.is_none(), "{text}");
+        assert!(has(&result, RefusalReason::MalformedDocument), "{text}");
+    }
+}

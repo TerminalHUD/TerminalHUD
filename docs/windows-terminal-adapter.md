@@ -115,7 +115,9 @@ Every profile needs a nonzero explicit GUID. One same-GUID user entry may overla
 one fragment; duplicate user GUIDs, duplicate fragment identities and competing
 fragment GUID contributions are refused. Multiple different documents in the
 same namespace are supported. Duplicate JSON keys, including escaped equivalents
-and nested keys, are rejected before conversion to lossy JSON maps. Malformed
+and nested keys, are rejected before conversion to lossy JSON maps. Only JSON
+comments and trailing commas are enabled; JSON5 syntax and missing commas are
+rejected. Malformed
 supported properties and containers have separate findings from unsupported
 forms. Null property values, null unfocused objects and object-shaped color
 schemes remain unsupported/unresolved rather than taking a guessed inheritance
