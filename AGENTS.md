@@ -9,7 +9,7 @@ For TerminalHUD, read [requirements](docs/requirements.md),
 [architecture](docs/architecture.md), and the relevant accepted
 [architecture decisions](docs/decisions/) before changing product behavior.
 Keep HudSwitch core independent of terminal, UI, and OS-specific code. The MVP
-uses Rust, Windows 11, and a dedicated Windows Terminal process; other platforms
+uses Rust, Windows 11, and a dedicated window in the installed Windows Terminal; other platforms
 and an embedded terminal remain future work.
 
 Follow [source organization standards](docs/standards.md) when writing or

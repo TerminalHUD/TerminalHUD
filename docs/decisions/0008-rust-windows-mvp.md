@@ -14,7 +14,9 @@ feasibility work without reducing meaningful risk.
 - The product name is `TerminalHUD`.
 - Implement TerminalHUD and HudSwitch in Rust using a Cargo workspace.
 - Target Windows 11 and Windows Terminal for the MVP.
-- Run Windows Terminal as a dedicated separate process managed by TerminalHUD.
+- Originally required a dedicated separate Windows Terminal process. This clause
+  is superseded by [ADR 0010](0010-installed-terminal-window.md): use the installed
+  Terminal with a dedicated HUD window and allow its owner process to be shared.
 - Treat embedded terminal hosting as a possible future feature, not an MVP
   requirement.
 - Do not require Linux, macOS, X11, or Wayland support for the MVP.

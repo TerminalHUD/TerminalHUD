@@ -45,6 +45,48 @@ pub(super) fn normalize(mut values: Map<String, Value>) -> Map<String, Value> {
         }
         values.remove(old);
     }
+    // hstring and IMediaResource converters consume null as an explicit empty
+    // value. Other OptionalConverter scalars let null unset this layer.
+    for key in [
+        "name",
+        "source",
+        "commandline",
+        "startingDirectory",
+        "tabTitle",
+        "padding",
+        "icon",
+        "backgroundImage",
+        "experimental.pixelShaderPath",
+        "experimental.pixelShaderImagePath",
+        "answerbackMessage",
+        "dragDropDelimiter",
+        "bellSound",
+    ] {
+        if values.get(key).is_some_and(Value::is_null) {
+            values.insert(key.into(), json!(""));
+        }
+    }
+    if let Some(Value::Object(font)) = values.get_mut("font") {
+        for key in ["face", "cellWidth", "cellHeight"] {
+            if font.get(key).is_some_and(Value::is_null) {
+                font.insert(key.into(), json!(""));
+            }
+        }
+    }
+    if let Some(Value::Object(schemes)) = values.get_mut("colorScheme") {
+        for key in ["dark", "light"] {
+            if schemes.get(key).is_some_and(Value::is_null) {
+                schemes.insert(key.into(), json!(""));
+            }
+        }
+    }
+    if let Some(Value::Object(environment)) = values.get_mut("environment") {
+        for value in environment.values_mut() {
+            if value.is_null() {
+                *value = json!("");
+            }
+        }
+    }
     // Most native properties are std::optional<T>: JSON null unsets the layer,
     // allowing inheritance. Nullable color settings deliberately retain null.
     values.retain(|key, value| !value.is_null() || !optional_property(key));

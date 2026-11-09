@@ -27,7 +27,7 @@ configuration or remote-control interfaces.
 ## Linux/Wayland
 
 TerminalHUD never controls an arbitrary existing terminal: it manages the
-dedicated terminal process it launched. Wayland nevertheless treats that
+dedicated terminal window it launched; its Windows Terminal owner PID may be shared. Wayland nevertheless treats that
 separate terminal process as a separate client. Launching it does not grant
 TerminalHUD permission to make its window topmost, click-through, hidden, or
 focused.

@@ -246,3 +246,49 @@ example creates a synthetic fragment preview and record in a fresh task director
 it never installs a fragment or edits main settings. Its `--shell` fixture checks
 nonce, `WT_PROFILE_ID`, and `WT_SESSION`, then waits for a nonce-scoped cleanup
 request. Native tests additionally check owner-prefix and CLI-command refusal.
+
+## Installed settings and launch preparation
+
+[ADR 0010](decisions/0010-installed-terminal-window.md) supersedes the earlier
+separate-process requirement. `Catalog::from_sources` consumes current user
+JSONC, optional actual inbox defaults, ordered fragments and generated provider
+results. `prepare` selects an explicit/default source GUID and produces an owned
+profile value, fragment preview and original command/directory/environment.
+`fragment_compatible` identifies native-default conflicts; such a conflict can be
+represented by the proposed user-list entry and is not an unsupported user theme.
+`validate_fallback` checks defaults/default-profile elevation and connection type
+before an explicit bridge command can reach an unknown-profile fallback.
+
+The source ordering is inline user fields, user defaults, fragment updates, then
+provider/inbox fields. Font aliases normalize within each layer; font subfields
+and light/dark schemes inherit independently, while axes/features/environment
+maps remain atomic. The first unfocused object (including a present null) owns its
+focused fallback. The adapter materializes that fallback so cloning does not
+accidentally inherit a different profile's colors. Unknown properties are copied
+as opaque values. The normal global configuration is neither exported nor rebuilt.
+
+Native `read_inbox_defaults` reads resource 101 from the candidate-adjacent
+`Microsoft.Terminal.Settings.Model.dll` using data/image-resource flags, without
+executing its settings loader. `discover_generated_profiles` reads legacy WSL
+registration and supports an unambiguous single traditional PowerShell install;
+it does not start either shell. Modern WSL profiles come from their fragments.
+Competing PowerShell layouts, unavailable provider data and other generators remain
+unresolved until supported; source names are not permission to guess a command.
+`read_profile_fragment` retains known media origin by resolving fragment-relative
+icons, backgrounds, shaders and sounds before materialization, and generates
+missing fragment GUIDs with Terminal's namespace/UTF-16 UUIDv5 rules.
+
+`plan_wsl_launch` models Terminal's command-sensitive directory promotion for a
+system `wsl.exe`, keeping original arguments and existing `--cd`/bare `~` behavior.
+The bridge must use this plan when replacing the Terminal launch command; simply
+inheriting the bridge cwd does not preserve a WSL Linux directory. Shell launch
+and profile/session authorization are application composition responsibilities.
+
+The pure owned-entry editor and proposed setup policy are documented in
+[ADR 0011](decisions/0011-owned-profile-entries.md). No real settings write is
+performed by this adapter. Application code owns file receipts/backup/transactions,
+refreshes input on startup/reload/next launch, and never closes live sessions for
+settings updates. Successful disk preparation is not proof that an existing host
+has reloaded a profile. On GUID mismatch the bridge refuses to execute the shell;
+Terminal may already have opened an unmanaged fallback window. Report that case
+without killing a shared process or silently selecting another shell.

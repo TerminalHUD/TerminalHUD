@@ -27,7 +27,16 @@ Ordinary profiles and the main `settings.json` remain untouched.
 - Installation and removal are isolated and reversible.
 - TerminalHUD must discover and reproduce relevant launch behavior for explicit,
   dynamic, WSL, and third-party profiles.
-- Unsupported or ambiguous profiles require a safe fallback or user selection.
+- Unsupported or ambiguous profiles require explicit resolution or user selection;
+  never guess another shell.
 - The adapter must test fragment reload behavior across supported Terminal
   versions.
 
+
+## Installed-settings limitation
+
+User profile defaults outrank a new fragment profile in Terminal's native loader.
+Consequently a fragment cannot always preserve a selected profile's inline
+settings or apply HUD opacity. [ADR 0011](0011-owned-profile-entries.md) proposes
+byte-preserving, receipt-owned user-list entries after explicit setup consent.
+That proposal does not authorize a main-settings write by itself.

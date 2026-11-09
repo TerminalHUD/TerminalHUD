@@ -139,8 +139,9 @@ The architecture must not assume that every terminal is always an unrelated
 window found after launch. A terminal integration may use one of three modes:
 
 1. **Managed external terminal:** TerminalHUD launches and exclusively manages a
-   dedicated terminal process, then the HudSwitch backend controls its native
-   window where the platform permits. Windows Terminal is the first example.
+   dedicated terminal window, then the HudSwitch backend controls that window
+   where the platform permits. Windows Terminal may share its owner process
+   with unrelated windows.
 2. **Cooperative terminal:** the dedicated terminal remains a separate process,
    but an IPC/plugin/control API asks the window-owning process to apply HUD
    behavior itself. This can satisfy platforms that restrict cross-process
@@ -150,7 +151,10 @@ window found after launch. A terminal integration may use one of three modes:
    control but expands the product into terminal emulation and rendering.
 
 HudSwitch and TerminalHUD run in the same process in the normal application.
-The Windows MVP uses mode 1 with Windows Terminal as a separate managed process.
+The Windows MVP uses mode 1 with the installed Windows Terminal and a dedicated
+managed window ([ADR 0010](decisions/0010-installed-terminal-window.md)). The
+window's verified owner process may be shared. Retained process identity helps
+validate the target; it never authorizes process-wide shutdown or modification.
 An embedded terminal is a possible future feature, not a requirement. The MVP
 must avoid making modes 2 or 3 impossible, but does not implement them.
 
