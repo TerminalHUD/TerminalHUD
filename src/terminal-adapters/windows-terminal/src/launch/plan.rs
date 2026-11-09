@@ -22,6 +22,22 @@ pub struct LaunchPlan {
     pub primary_origin: (i32, i32),
 }
 impl LaunchPlan {
+    /// Keep the selected profile's environment policy when an explicit bridge
+    /// command would otherwise make Terminal implicitly inherit its environment.
+    /// Append the replacement command after these new-tab options.
+    pub fn arguments_with_environment(&self, reload_environment: bool) -> Vec<String> {
+        let mut arguments = self.arguments();
+        arguments.push(
+            if reload_environment {
+                "--reloadEnvironment"
+            } else {
+                "--inheritEnvironment"
+            }
+            .into(),
+        );
+        arguments
+    }
+
     pub fn arguments(&self) -> Vec<String> {
         vec![
             "--window".into(),

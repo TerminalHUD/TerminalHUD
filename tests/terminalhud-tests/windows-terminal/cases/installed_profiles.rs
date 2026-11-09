@@ -371,3 +371,39 @@ fn native_null_strings_and_resources_clear_instead_of_inheriting() {
     );
     assert_eq!(result.environment["CLEARED"], "");
 }
+
+#[test]
+fn environment_reload_policy_preserves_default_explicit_and_inherited_values() {
+    for setting in [None, Some(true), Some(false)] {
+        let mut profile = source();
+        if let Some(value) = setting {
+            profile["compatibility.reloadEnvironmentVariables"] = json!(value);
+        }
+        let result = Catalog::parse(&input(json!({}), profile))
+            .unwrap()
+            .prepare(None, guid(9), 35)
+            .unwrap();
+        assert_eq!(result.reload_environment, setting.unwrap_or(true));
+    }
+    let mut profile = source();
+    profile["compatibility.reloadEnvironmentVariables"] = Value::Null;
+    let result = Catalog::parse(&input(
+        json!({"compatibility.reloadEnvironmentVariables":false}),
+        profile,
+    ))
+    .unwrap()
+    .prepare(None, guid(9), 35)
+    .unwrap();
+    assert!(
+        !result.reload_environment,
+        "null bool inherits the selected defaults"
+    );
+    let mut profile = source();
+    profile["compatibility.reloadEnvironmentVariables"] = json!("false");
+    assert!(
+        Catalog::parse(&input(json!({}), profile))
+            .unwrap()
+            .prepare(None, guid(9), 35)
+            .is_err()
+    );
+}

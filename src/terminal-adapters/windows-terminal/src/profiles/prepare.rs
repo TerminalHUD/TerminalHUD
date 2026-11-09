@@ -15,6 +15,8 @@ pub struct PreparedProfile {
     pub commandline: String,
     pub starting_directory: Option<String>,
     pub environment: BTreeMap<String, String>,
+    /// Effective compatibility.reloadEnvironmentVariables; Terminal defaults to true.
+    pub reload_environment: bool,
 }
 impl Catalog {
     pub fn prepare(
@@ -79,6 +81,16 @@ impl Catalog {
                 );
             }
         }
+        let reload_environment = source
+            .effective
+            .get("compatibility.reloadEnvironmentVariables")
+            .map(|value| {
+                value
+                    .as_bool()
+                    .ok_or(Error::Invalid("invalid environment reload setting"))
+            })
+            .transpose()?
+            .unwrap_or(true);
         Ok(PreparedProfile {
             source_guid: selected.clone(),
             hud_guid,
@@ -88,6 +100,7 @@ impl Catalog {
             commandline,
             starting_directory,
             environment,
+            reload_environment,
         })
     }
 }
