@@ -1,7 +1,7 @@
 use super::{NativeError, command::wide, error::last};
 use serde_json::{Map, Value};
 use std::path::Path;
-use windows_sys::Win32::System::Environment::ExpandEnvironmentStringsW;
+use windows_sys::Win32::{System::Environment::ExpandEnvironmentStringsW, UI::Shell::PathIsUNCEx};
 
 /// Read a fragment and retain the meaning of known media properties when moving
 /// its profile to user-settings precedence. Never changes the fragment itself.
@@ -100,7 +100,7 @@ fn media(raw: &str, base: &Path, icon: bool) -> Result<String, NativeError> {
     }
     // A fragment's disallowed UNC resource must not become usable by acquiring
     // user-profile origin. Preserve the rejected/empty resource.
-    if value.starts_with("\\\\") || value.starts_with("//") {
+    if is_unc(&value)? {
         return Ok(String::new());
     }
     if value.is_empty() {
@@ -124,6 +124,12 @@ fn media(raw: &str, base: &Path, icon: bool) -> Result<String, NativeError> {
     // Missing files are rejected by Terminal too, but keep the absolute path so
     // a later appearance reload can resolve a file created after preparation.
     Ok(format!("{}{index}", resolved.display()))
+}
+// Match Terminal's native path classification without opening the resource.
+// Extended local drive paths begin with two slashes too, but are not UNC.
+fn is_unc(path: &str) -> Result<bool, NativeError> {
+    let path = wide(path.as_ref())?;
+    Ok(unsafe { PathIsUNCEx(path.as_ptr(), std::ptr::null_mut()) } != 0)
 }
 // Only local drive file URIs have an unambiguous supported conversion here.
 // Decode before checking UNC so acquiring User origin cannot enable a resource
@@ -160,7 +166,7 @@ fn file_uri_path(uri: &str) -> Result<String, NativeError> {
     }
     let path =
         String::from_utf8(decoded).map_err(|_| NativeError::Invalid("invalid file URI UTF-8"))?;
-    if path.starts_with("\\\\") || path.starts_with("//") {
+    if is_unc(&path)? {
         return Ok(String::new());
     }
     let bytes = path.as_bytes();
@@ -208,6 +214,16 @@ mod tests {
             .clone();
         resolve(&mut values, base).unwrap();
         assert_eq!(values["bellSound"], r"C:\fixtures\vendor\bell.wav");
+    }
+    #[test]
+    fn native_unc_classification_preserves_extended_local_drive_paths() {
+        let base = Path::new(r"C:\fixtures\vendor");
+        let local = r"\\?\C:\fixtures\wall.png";
+        assert_eq!(media(local, base, false).unwrap(), local);
+        for unc in [r"\\server\share\wall.png", r"\\?\UNC\server\share\wall.png"] {
+            assert!(is_unc(unc).unwrap());
+            assert_eq!(media(unc, base, false).unwrap(), "");
+        }
     }
     #[test]
     fn media_keeps_fragment_origin_without_enabling_unc_resources() {
