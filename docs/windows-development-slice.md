@@ -273,3 +273,50 @@ style/visibility witnesses and external baseline checks remain the outer runner'
 responsibility. A pass establishes this bounded native state/lifecycle slice.
 It leaves physical selected-shortcut operation and actual post-Quit command input
 unclaimed until separately observed, without a manual hotkey session.
+
+### Startup-only controlled observation
+
+The test-only `--startup-observe` mode isolates initial presentation from the
+full lifecycle proof. It is not a product CLI option and does not establish a
+full automated proof pass:
+
+```powershell
+& "$env:CARGO_TARGET_DIR\debug\examples\app-slice-proof.exe" --startup-observe 'C:\absolute-task-directory\runtime.json' 'C:\absolute-private-evidence\new-trace.txt'
+```
+
+Source, exact product/observer binaries, fresh disposable runtime and external
+baselines require review before execution. The historical-reproduction trial
+uses byte-identical archived product binaries copied into a fresh task slot,
+with the separately built observer beside them. The original sink proof's one
+checked foreground request remains setup only; refusal prevents Terminal launch.
+There is no additional activation request, click, keyboard input or automatic
+repeat. Reserve a confirmed hands-off interval, normally 15–30 seconds; the
+outer 90-second observation deadline reports pending unwind and never kills an
+owner or terminal.
+
+A capped in-memory observer samples at approximately 10 ms and formats its
+private trace after the startup outcome. It records monotonic elapsed time,
+raw session-specific last-input ticks and foreground HWND/PID/TID, with stage
+markers. It records no titles, key contents or hooks. The
+[GetLastInputInfo](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getlastinputinfo)
+tick can move backwards or wrap and cannot attribute input to the user or a
+particular process. A changed tick means **observed input activity**. An unchanged
+tick and permitted sampled foreground mean only **no disturbance observed**;
+coarse timestamps and finite sampling cannot prove that no input occurred.
+[Foreground can be NULL during transitions](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getforegroundwindow).
+
+Observed activity, unexpected foreground identity, unstable/NULL or failed
+samples, gaps over 100 ms, missing stages or exhausted observation capacity make
+the trial **INCONCLUSIVE**. Expected owned focus stages remain distinct from a
+third window. Raw native success/failure is reported separately, without treating
+an inconclusive observation as product success or failure. Startup assessment
+ends before Quit; activity during later cleanup cannot explain an earlier timeout.
+
+Cleanup attempts normal authenticated Quit only for the verified retained owner,
+without blind retries, then verifies original styles/visibility and the same live
+session. Separately closing that fresh disposable fixture requires repeated exact
+ownership checks and no observed activity, unknown foreground or coverage gap
+since launch, including a final observation guard. Otherwise the restored session
+stays open for explicit disposition; possible user work is preserved. This is a
+bounded observation policy, not an atomic guarantee against activity between a
+sample and the checked close. Unrelated windows/settings remain read-only witnesses.

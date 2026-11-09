@@ -1,5 +1,6 @@
 use super::{Command, REAL_INSTANCE, Result, ipc};
 use std::{
+    cell::Cell,
     fs,
     os::windows::io::{AsRawHandle, OwnedHandle},
     path::{Path, PathBuf},
@@ -26,9 +27,19 @@ pub(super) struct Owner {
     pub pid: u32,
     process: OwnedHandle,
     pub log: PathBuf,
+    pub startup_failure: Option<String>,
+    pub startup_reply: Reply,
+    quit_dispatched: Cell<bool>,
 }
 impl Owner {
     pub(super) fn start(manifest: &Path) -> Result<Self> {
+        let owner = Self::start_observed(manifest)?;
+        if let Some(error) = &owner.startup_failure {
+            return Err(error.clone().into());
+        }
+        Ok(owner)
+    }
+    pub(super) fn start_observed(manifest: &Path) -> Result<Self> {
         let startup = super::startup::launch(manifest)?;
         // Establish the expected same-connection status before constructing a
         // guard whose Drop can send Quit. Replacements are never adopted.
@@ -37,19 +48,21 @@ impl Owner {
             return Err("initial status owner/mode mismatch; no owner adopted".into());
         }
         let _retained_cli = startup.cli;
-        let owner = Self {
+        let mut owner = Self {
             pid: startup.pid,
             process: startup.process,
             log: startup.log,
+            startup_reply: reply,
+            startup_failure: None,
+            quit_dispatched: Cell::new(false),
         };
         owner.ensure()?;
         if !startup.success || reply.code != ReplyCode::Ok {
-            return Err(format!(
+            owner.startup_failure = Some(format!(
                 "real startup failed: {}; {}",
                 startup.stderr,
                 fs::read_to_string(&owner.log)?
-            )
-            .into());
+            ));
         }
         Ok(owner)
     }
@@ -63,6 +76,9 @@ impl Owner {
     }
     pub(super) fn call(&self, command: Command) -> Result<Reply> {
         self.ensure()?;
+        if command == Command::Quit && self.quit_dispatched.replace(true) {
+            return Err("Quit already attempted; no retry".into());
+        }
         let reply = ipc::call_for_process(REAL_INSTANCE, self.pid, command)?;
         if reply.process_id != self.pid || reply.mode != Mode::Real {
             return Err("reply owner/mode changed".into());
@@ -75,6 +91,11 @@ impl Owner {
             )
             .into());
         }
+        if command == Command::Quit
+            && reply.status.availability != terminalhud_core::integration::Availability::Unmanaged
+        {
+            return Err("Quit did not confirm Unmanaged; restoration remains unconfirmed".into());
+        }
         Ok(reply)
     }
     pub(super) fn wait_exit(&self) -> Result<()> {
@@ -86,11 +107,12 @@ impl Owner {
 }
 impl Drop for Owner {
     fn drop(&mut self) {
-        if self.ensure().is_ok()
+        if !self.quit_dispatched.get()
+            && self.ensure().is_ok()
             && let Err(error) = self.call(Command::Quit).and_then(|_| self.wait_exit())
         {
             eprintln!(
-                "APP_OWNER_CLEANUP_FAILED {error}; real owner left alive for restoration retry"
+                "APP_OWNER_CLEANUP_FAILED {error}; real owner left alive with restoration pending; no automatic retry"
             );
         }
     }

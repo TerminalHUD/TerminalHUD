@@ -8,16 +8,30 @@ mod client;
 #[path = "../../../windows-terminal/proof/windows/foreground_setup.rs"]
 mod foreground_setup;
 mod lifecycle;
+mod monitor;
 #[path = "../../../windows-terminal/proof/windows/observe.rs"]
 mod observe;
 mod startup;
 mod startup_identity;
+mod startup_observe;
 mod target;
 #[path = "../../../windows-terminal/proof/windows/underlay/mod.rs"]
 mod underlay;
 #[path = "../../../windows-terminal/proof/windows/witness.rs"]
 mod witness;
-pub(super) fn run(args: Vec<String>) -> Result<()> {
+pub(super) enum Completion {
+    FullProof,
+    StartupPass,
+    StartupFailure,
+    Inconclusive,
+}
+pub(super) fn run(args: Vec<String>) -> Result<Completion> {
+    if args.first().is_some_and(|a| a == "--startup-observe") && args.len() == 3 {
+        return startup_observe::run(
+            std::path::Path::new(&args[1]),
+            std::path::Path::new(&args[2]),
+        );
+    }
     if args.len() != 1 {
         return Err("explicit absolute development manifest required".into());
     }
@@ -59,5 +73,5 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
     println!(
         "APP_SLICE_PASS state/lifecycle/restoration with live bridge/session; no keyboard input injected. Actual post-Quit interactive command and physical selected shortcuts remain untested."
     );
-    Ok(())
+    Ok(Completion::FullProof)
 }
