@@ -45,6 +45,8 @@ fn setup_and_reload_preserve_ordinary_bytes_and_refuse_changed_owned_entry() {
     let summary = first.summary(false);
     assert!(summary.contains("fixture"));
     assert!(!summary.contains("cmd.exe"));
+    assert!(summary.contains("opacity=35"));
+    assert!(summary.contains("unfocusedAppearance.backgroundImageOpacity=0"));
     assert!(first.summary(true).contains("cmd.exe"));
     let guid = first.profile.hud_guid.clone();
     first.commit().unwrap();
@@ -62,6 +64,7 @@ fn setup_and_reload_preserve_ordinary_bytes_and_refuse_changed_owned_entry() {
     })
     .unwrap();
     let changed = prepare_from(&config, fixture.sources(), None, &[]).unwrap();
+    assert!(changed.summary(false).contains("opacity=60"));
     changed.commit().unwrap();
     let after = fs::read_to_string(fixture.0.join("settings.json")).unwrap();
     assert_eq!(

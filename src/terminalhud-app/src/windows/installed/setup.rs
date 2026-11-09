@@ -193,15 +193,25 @@ impl Plan {
             .unwrap_or("unknown")
             .strip_prefix("HUD — ")
             .unwrap_or("unknown");
+        let owned = &self.profile.owned_profile;
+        let unfocused = &owned["unfocusedAppearance"];
         let mut text = format!(
-            "Windows Terminal ({:?}): {}\nSettings: {}\nSource profile: {} ({})\n{} TerminalHUD-owned profile: {}\nHUD overrides: independent profile identity/name; hidden and elevation off; source/update links removed; active opacity and acrylic off; unfocused opacity, acrylic and background image opacity zero.\nAll ordinary settings bytes are preserved. Apply stages a replacement with an exact backup beside settings and a local ownership receipt.",
+            "Windows Terminal ({:?}): {}\nSettings: {}\nSource profile: {} ({})\n{} TerminalHUD-owned profile: {} (name: {})\nHUD overrides: hidden={}; elevate={}; source/updates removed; opacity={}; useAcrylic={}; unfocusedAppearance.opacity={}; unfocusedAppearance.useAcrylic={}; unfocusedAppearance.backgroundImageOpacity={}.\nAll ordinary settings bytes are preserved. Apply stages a replacement with an exact backup beside settings and a local ownership receipt.",
             self.sources.channel,
             clean(&self.sources.executable.to_string_lossy()),
             clean(&self.sources.settings.to_string_lossy()),
             clean(source),
             self.profile.source_guid,
             if self.is_owned() { "Update" } else { "Add" },
-            self.profile.hud_guid
+            self.profile.hud_guid,
+            clean(owned["name"].as_str().unwrap_or("unknown")),
+            boolean(&owned["hidden"]),
+            boolean(&owned["elevate"]),
+            number(&owned["opacity"]),
+            boolean(&owned["useAcrylic"]),
+            number(&unfocused["opacity"]),
+            boolean(&unfocused["useAcrylic"]),
+            number(&unfocused["backgroundImageOpacity"]),
         );
         if details {
             text.push_str("\n\nOwned entry (may contain private profile values):\n");
@@ -217,6 +227,18 @@ impl Plan {
 #[cfg(test)]
 mod tests;
 
+fn boolean(value: &serde_json::Value) -> String {
+    value
+        .as_bool()
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "invalid".into())
+}
+fn number(value: &serde_json::Value) -> String {
+    value
+        .as_i64()
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "invalid".into())
+}
 fn clean(value: &str) -> String {
     value.chars().filter(|c| !c.is_control() && !matches!(*c, '\u{200e}'..='\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')).take(512).collect()
 }
