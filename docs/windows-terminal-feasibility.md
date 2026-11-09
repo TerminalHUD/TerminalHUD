@@ -23,18 +23,23 @@ bounds, topmost, focus, 35% background, and opaque-white text (1,562 qualifying
 samples). Native Passive state and exact saved-foreground checks passed despite
 a retained `FocusRefused` warning. Passive background reached 0%; completed
 captures had zero white samples. A visual observation reported white appearing
-briefly then disappearing. Frame-refresh and post-failure Layered-off controls
-did not restore white. The cause is unproven; the initial style/lifecycle and
-0% boundary remain possible factors.
+briefly then disappearing. However, the opaque blue test background was itself
+topmost, and the proof never established that it remained behind the HUD after
+foreground restoration. Those observations cannot distinguish occlusion from
+renderer loss. Separate no-input diagnostics with a verified background behind
+the target preserved 0% background and opaque text both with and without alpha
+initialization, including a control adding initial Active presentation. These
+diagnostics do not establish full controller acceptance or an alpha-related cause.
 
-**Acceptance boundary.** The captured post-failure controls do not establish the
-cause or a fix. No 0% reference has reached appearance measurement. The 1%
-diagnostic is unapproved and does not satisfy 0% acceptance. Physical click
-routing, remaining Hidden/session loops, and the normal successful-Quit/session-preservation phase have not run.
+**Acceptance boundary.** The proof now uses an ordinary non-topmost background
+and checks actual target-above-background order around capture and click routing,
+without repositioning the HUD to force a pass. The corrected full proof has not
+yet run. Physical click routing, remaining Hidden/session loops, and the normal
+successful-Quit/session-preservation phase remain unverified.
 A direct focus warning alone does not prove whether a particular run took the
-hide/show branch. The corrected proof acquisition allows normal backend
-activation; resolution of the earlier timeout has not been empirically
-established. Complete profile cloning is also unverified.
+hide/show branch. Product alpha initialization and the full proof's saved-focus,
+ownership and neutral-input guards are unchanged. Complete profile cloning is
+also unverified.
 
 **Reproduction and raw records.** See the [Windows Terminal proof guide](windows-terminal-proof.md)
 and [TER-9/TER-14 draft PR #9](https://github.com/TerminalHUD/TerminalHUD/pull/9).

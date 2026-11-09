@@ -3,7 +3,7 @@ use super::{
     super::{Result, underlay::Underlay},
     identity,
     launch::Launched,
-    render_evidence, render_sample,
+    render_evidence, render_sample, z_order,
 };
 use std::{
     thread,
@@ -12,6 +12,8 @@ use std::{
 pub(super) fn verify(target: &Launched, sink: &Underlay, passive: bool) -> Result<()> {
     target.session.output_flushed()?;
     let rect = identity::fullscreen(target)?;
+    z_order::ensure(target, sink)?;
+    println!("ACTIVE_RENDER_CONTEXT topmost target above ordinary owned background confirmed");
     println!(
         "ACTIVE_RENDER_BOUNDS display=({},{},{},{}) fixture=foreground-white rows2-5 cols2-25; scan step8 top512 unchanged",
         rect.left, rect.top, rect.right, rect.bottom

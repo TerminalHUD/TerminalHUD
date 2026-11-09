@@ -33,7 +33,7 @@ pub(super) fn start() -> Result<Underlay> {
             return;
         }
         let hwnd = CreateWindowExW(
-            WS_EX_TOPMOST,
+            0,
             name.as_ptr(),
             name.as_ptr(),
             WS_POPUP,

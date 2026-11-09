@@ -15,6 +15,7 @@ mod render_sample;
 mod session;
 mod shutdown;
 mod states;
+mod z_order;
 use super::{
     Result, foreground_setup, setup::Setup, sources, underlay::Underlay, witness::Witness,
 };

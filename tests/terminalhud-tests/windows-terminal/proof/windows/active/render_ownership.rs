@@ -3,7 +3,7 @@ use super::{
     super::{Result, underlay::Underlay},
     identity,
     launch::Launched,
-    render_capture,
+    render_capture, z_order,
 };
 use std::time::Instant;
 use windows_sys::Win32::{Foundation::*, UI::WindowsAndMessaging::*};
@@ -31,7 +31,7 @@ pub(super) fn validate(
     if unsafe { GetForegroundWindow() } != expected {
         return Err("owned capture foreground changed".into());
     }
-    Ok(())
+    z_order::ensure(target, sink)
 }
 pub(super) fn hit(target: &Launched, sink: &Underlay, x: i32, y: i32) -> Result<()> {
     let root = unsafe { GetAncestor(WindowFromPoint(POINT { x, y }), GA_ROOT) };

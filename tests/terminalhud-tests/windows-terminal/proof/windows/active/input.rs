@@ -3,6 +3,7 @@ use super::{
     super::{Result, observe, underlay::Underlay},
     identity, input_recovery,
     launch::Launched,
+    z_order,
 };
 use windows_sys::Win32::{
     Foundation::*,
@@ -16,6 +17,7 @@ pub(super) fn click_sink(target: &Launched, sink: &Underlay) -> Result<()> {
         y: (rect.top + rect.bottom) / 2,
     };
     identity::owned_point(target, sink, point)?;
+    z_order::ensure(target, sink)?;
     if unsafe { WindowFromPoint(point) } != sink.hwnd() {
         return Err("refusing physical input: hit target is not the owned sink".into());
     }
@@ -46,6 +48,7 @@ pub(super) fn click_sink(target: &Launched, sink: &Underlay) -> Result<()> {
     ];
     sink.ensure_owned()?;
     identity::ensure(target)?;
+    z_order::ensure(target, sink)?;
     if unsafe { WindowFromPoint(point) } != sink.hwnd() {
         return Err("owned click hit test changed before injection".into());
     }
@@ -69,7 +72,10 @@ pub(super) fn click_sink(target: &Launched, sink: &Underlay) -> Result<()> {
         ) == 1
     })?;
     observe::wait(|| sink.clicks() == before + 1)?;
-    println!("ACTIVE_PROOF physical Passive click reached owned sink exactly once");
+    z_order::ensure(target, sink)?;
+    println!(
+        "ACTIVE_PROOF physical Passive click reached owned sink exactly once; target remained above ordinary background"
+    );
     Ok(())
 }
 
