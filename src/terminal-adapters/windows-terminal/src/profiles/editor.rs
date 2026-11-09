@@ -69,12 +69,8 @@ pub fn plan_profile_patch(
     }) {
         return Err(Error::Collision);
     }
-    let block = format!(
-        "\n// TerminalHUD owned profile {}\n{},\n",
-        guid,
-        serde_json::to_string_pretty(profile)
-            .map_err(|_| Error::Invalid("cannot serialize profile"))?
-    );
+    let block =
+        owned_block(&guid, profile).map_err(|_| Error::Invalid("cannot serialize profile"))?;
     updated.insert_str(range.start + 1, &block);
     list_range(&updated)?;
     Ok(ProfilePatch {
@@ -111,12 +107,8 @@ pub fn remove_owned_profile(settings: &str, owned: &OwnedProfileEntry) -> Result
     {
         return Err(Error::Invalid("invalid ownership receipt"));
     }
-    let canonical = format!(
-        "\n// TerminalHUD owned profile {}\n{},\n",
-        owned.guid,
-        serde_json::to_string_pretty(&profiles[0])
-            .map_err(|_| Error::Invalid("invalid ownership profile"))?
-    );
+    let canonical = owned_block(&owned.guid, &profiles[0])
+        .map_err(|_| Error::Invalid("invalid ownership profile"))?;
     if canonical != owned.block
         || !entries.iter().any(|(guid, span)| {
             guid.as_ref() == Some(&owned.guid) && span.start >= start && span.end <= end
@@ -185,4 +177,12 @@ fn list_layout(settings: &str) -> Result<ListLayout, Error> {
         entries.push((guid, element.start() + offset..element.end() + offset));
     }
     Ok((array.start() + offset..array.end() + offset, entries))
+}
+
+fn owned_block(guid: &Guid, profile: &Value) -> Result<String, serde_json::Error> {
+    Ok(format!(
+        "\n// TerminalHUD owned profile {}\n{},\n",
+        guid,
+        serde_json::to_string_pretty(profile)?
+    ))
 }
