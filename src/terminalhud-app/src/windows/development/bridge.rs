@@ -25,6 +25,7 @@ fn run(args: &[String]) -> std::io::Result<()> {
     if profile != actual_profile {
         return Err(error("Terminal did not load requested development profile"));
     }
+    super::super::recovery::start(nonce.bare().replace('-', ""))?;
     let mut child = Command::new(namespaces::powershell()?)
         .args(["-NoLogo", "-NoProfile"])
         .spawn()?;

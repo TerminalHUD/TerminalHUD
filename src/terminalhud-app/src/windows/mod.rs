@@ -5,6 +5,7 @@ pub mod ipc;
 mod native;
 pub mod process_output;
 pub(crate) mod process_spawn;
+mod recovery;
 pub mod security;
 pub mod startup;
 mod tray;
