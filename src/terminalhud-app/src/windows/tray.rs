@@ -1,4 +1,7 @@
-//! Native menu/icon resources; actions only enqueue host commands.
+pub fn tray(ui: super::host::UiSender) -> std::io::Result<tray_icon::TrayIcon> {
+    tray_for_mode(ui, crate::mode::Mode::Prototype, 0)
+}
+// Native menu/icon resources; actions only enqueue host commands.
 use super::host::{UiMessage, UiSender};
 use std::io;
 use terminalhud_core::Command;
@@ -6,20 +9,42 @@ use tray_icon::{
     Icon, TrayIcon, TrayIconBuilder,
     menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
 };
-pub fn tray(ui: UiSender) -> io::Result<TrayIcon> {
+pub(super) fn tray_for_mode(
+    ui: UiSender,
+    mode: crate::mode::Mode,
+    hotkey_error: u32,
+) -> io::Result<TrayIcon> {
     let menu = Menu::new();
     for (id, label) in [
         ("interaction", "Toggle interaction (prototype)"),
         ("visibility", "Toggle visibility (prototype)"),
         ("passive", "Make Passive (prototype)"),
     ] {
-        menu.append(&MenuItem::with_id(id, label, true, None))
-            .map_err(io::Error::other)?;
+        menu.append(&MenuItem::with_id(
+            id,
+            if mode == crate::mode::Mode::Prototype {
+                label
+            } else {
+                label.trim_end_matches(" (prototype)")
+            },
+            true,
+            None,
+        ))
+        .map_err(io::Error::other)?;
     }
     menu.append(&PredefinedMenuItem::separator())
         .map_err(io::Error::other)?;
-    menu.append(&MenuItem::with_id("quit", "Quit prototype", true, None))
-        .map_err(io::Error::other)?;
+    menu.append(&MenuItem::with_id(
+        "quit",
+        if mode == crate::mode::Mode::Prototype {
+            "Quit prototype"
+        } else {
+            "Quit TerminalHUD"
+        },
+        true,
+        None,
+    ))
+    .map_err(io::Error::other)?;
     MenuEvent::set_event_handler(Some(move |event: MenuEvent| {
         let command = match event.id().as_ref() {
             "interaction" => Command::InteractionToggle,
@@ -48,7 +73,13 @@ pub fn tray(ui: UiSender) -> io::Result<TrayIcon> {
     TrayIconBuilder::new()
         .with_id("terminalhud-prototype")
         .with_menu(Box::new(menu))
-        .with_tooltip("TerminalHUD prototype — no terminal attached")
+        .with_tooltip(if mode == crate::mode::Mode::Prototype {
+            "TerminalHUD prototype — no terminal attached"
+        } else if hotkey_error != 0 {
+            "TerminalHUD development — hotkeys unavailable; use tray or CLI status"
+        } else {
+            "TerminalHUD development"
+        })
         .with_icon(icon)
         .build()
         .map_err(io::Error::other)

@@ -1,4 +1,4 @@
-//! Versioned fixed-size prototype frames, independent of transport mechanics.
+//! Versioned fixed-size runtime frames, independent of transport mechanics.
 mod reply;
 mod request;
 pub use reply::{Reply, ReplyCode};

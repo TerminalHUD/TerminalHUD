@@ -3,7 +3,7 @@ use super::{
         native::{Handle, last},
         security::{self, Identity},
     },
-    read::read,
+    read::read_with_timeout,
     write::write,
 };
 use crate::protocol::{self, REPLY_LEN, Reply};
@@ -45,7 +45,7 @@ pub fn connect(identity: &Identity, instance: &str, timeout: Duration) -> io::Re
         if Instant::now() >= deadline {
             return Err(io::Error::new(
                 io::ErrorKind::TimedOut,
-                "prototype shell not ready/running",
+                "shell not ready/running",
             ));
         }
         thread::sleep(Duration::from_millis(10));
@@ -53,6 +53,19 @@ pub fn connect(identity: &Identity, instance: &str, timeout: Duration) -> io::Re
 }
 
 pub fn exchange(identity: &Identity, instance: &str, frame: &[u8]) -> io::Result<Reply> {
+    let timeout = if instance == crate::mode::REAL_INSTANCE {
+        22_000
+    } else {
+        super::IO_TIMEOUT
+    };
+    exchange_with_timeout(identity, instance, frame, timeout)
+}
+pub(super) fn exchange_with_timeout(
+    identity: &Identity,
+    instance: &str,
+    frame: &[u8],
+    timeout: u32,
+) -> io::Result<Reply> {
     if frame.len() > crate::protocol::REQUEST_LEN {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -62,9 +75,18 @@ pub fn exchange(identity: &Identity, instance: &str, frame: &[u8]) -> io::Result
     let pipe = connect(identity, instance, Duration::from_secs(2))?;
     write(pipe.raw(), frame, None)?;
     let mut response = [0; REPLY_LEN];
-    let count = read(pipe.raw(), &mut response, None)?;
-    let reply = Reply::decode(&response[..count])
-        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    let count = read_with_timeout(pipe.raw(), &mut response, None, timeout).map_err(|error| {
+        io::Error::new(
+            error.kind(),
+            format!("{error}; command outcome may be ambiguous; inspect status before retrying"),
+        )
+    })?;
+    let reply = Reply::decode(&response[..count]).map_err(|error| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("{error}; command outcome may be ambiguous; inspect status before retrying"),
+        )
+    })?;
     write(pipe.raw(), b"THA1", None)?;
     Ok(reply)
 }

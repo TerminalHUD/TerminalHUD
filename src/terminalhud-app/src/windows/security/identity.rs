@@ -23,11 +23,11 @@ impl Identity {
         {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "prototype instance must be 1–32 ASCII letters/digits/-/_",
+                "instance must be 1–32 ASCII letters/digits/-/_",
             ));
         }
         Ok(wide(&format!(
-            r"\\.\pipe\TerminalHUD.prototype.v1.{}.{}.{}",
+            r"\\.\pipe\TerminalHUD.shell.v2.{}.{}.{}",
             self.sid, self.session, instance
         )))
     }

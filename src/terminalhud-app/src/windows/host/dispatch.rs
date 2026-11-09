@@ -10,6 +10,9 @@ impl HostContext {
             self.deferred.set(true);
             return;
         }
+        if self.refresh_requested.replace(false) && !self.quitting.get() {
+            *self.observation_error.borrow_mut() = self.controller.borrow_mut().refresh().err();
+        }
         if self.close_requested.replace(false) {
             let outcome = self.controller.borrow_mut().execute(Command::Quit);
             match outcome {

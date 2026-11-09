@@ -29,6 +29,8 @@ fn malformed_frames_cannot_become_commands() {
 fn unconfirmed_and_absent_status_stay_distinct() {
     let mut reply = Reply {
         code: ReplyCode::TransitionFailed,
+        mode: crate::mode::Mode::Prototype,
+        hotkey_error: 0,
         status: Status {
             availability: Availability::Managed,
             state: None,
@@ -55,4 +57,31 @@ fn unconfirmed_and_absent_status_stay_distinct() {
     let mut invalid = reply.encode();
     invalid[5] = 0;
     assert!(Reply::decode(&invalid).is_err());
+}
+
+#[test]
+fn real_mode_and_native_conflicts_survive_reply_without_becoming_prototype_success() {
+    let reply = Reply {
+        code: ReplyCode::TransitionFailed,
+        mode: crate::mode::Mode::Real,
+        hotkey_error: 1409,
+        status: Status {
+            availability: Availability::Managed,
+            state: None,
+            target_id: None,
+        },
+        focus_warning: false,
+        sequence: 4,
+        menu_commands: 0,
+        process_id: 123,
+        host_console: false,
+    };
+    let decoded = Reply::decode(&reply.encode()).unwrap();
+    assert_eq!(decoded.mode, crate::mode::Mode::Real);
+    assert_eq!(decoded.hotkey_error, 1409);
+    assert!(decoded.display().contains("mode=real hotkey_error=1409"));
+    assert_eq!(decoded.status.state, None);
+    let mut unknown = reply.encode();
+    unknown[5] = 3;
+    assert!(Reply::decode(&unknown).is_err());
 }

@@ -1,13 +1,24 @@
+use crate::{
+    cli::validate_instance,
+    mode::{Mode, REAL_INSTANCE},
+};
 use std::time::Duration;
 pub fn run(args: Vec<String>) -> Result<(), String> {
     let mut options = super::HostOptions::default();
     let mut args = args.into_iter();
-    if args.next().as_deref() != Some("--prototype") {
-        return Err(
-            "explicit --prototype required; real Terminal composition is not implemented".into(),
-        );
+    match args.next().as_deref() {
+        Some("--prototype") => {}
+        Some("--development") => {
+            options.mode = Mode::Real;
+            options.instance = REAL_INSTANCE.into();
+            options.development = Some(args.next().ok_or("missing development manifest")?.into());
+        }
+        _ => return Err("explicit --prototype or --development MANIFEST required".into()),
     }
     while let Some(arg) = args.next() {
+        if options.mode == Mode::Real {
+            return Err("test hooks and instance overrides require prototype mode".into());
+        }
         match arg.as_str() {
             "--instance" => options.instance = args.next().ok_or("missing instance")?,
             "--headless" => options.headless = true,
@@ -25,6 +36,9 @@ pub fn run(args: Vec<String>) -> Result<(), String> {
             }
             _ => return Err(format!("unknown option: {arg}")),
         }
+    }
+    if options.mode == Mode::Prototype {
+        validate_instance(&options.instance)?;
     }
     super::run_host(options).map_err(|e| e.to_string())
 }

@@ -1,19 +1,21 @@
 use super::super::{
     ipc::{self, Server},
-    native::last,
     security::Identity,
-    tray::tray,
+    tray::tray_for_mode,
 };
-use super::{HostOptions, TIMER_DURATION, UiSender, context::HostContext, window::HostWindow};
+use super::{
+    HostOptions, UiSender, context::HostContext, controller::RuntimeController, hotkeys,
+    window::HostWindow,
+};
+use crate::mode::Mode;
 use std::{
-    io, mem, ptr,
+    io,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc,
     },
 };
 use terminalhud_core::Command;
-use windows_sys::Win32::UI::WindowsAndMessaging::*;
 static HOST_STARTED: AtomicBool = AtomicBool::new(false);
 pub fn run_host(options: HostOptions) -> io::Result<()> {
     if HOST_STARTED.swap(true, Ordering::Relaxed) {
@@ -22,6 +24,7 @@ pub fn run_host(options: HostOptions) -> io::Result<()> {
             "one GUI host per process",
         ));
     }
+    options.validate()?;
     let identity = Identity::current()?;
     let mut server = match Server::bind(&identity, &options.instance) {
         Ok(server) => server,
@@ -32,44 +35,47 @@ pub fn run_host(options: HostOptions) -> io::Result<()> {
         }
     };
     let (sender, queue) = mpsc::sync_channel(64);
-    let context = Box::new(HostContext::new(queue));
+    let controller = RuntimeController::new(&options)?;
+    let context = Box::new(HostContext::new(queue, controller, options.mode));
     let window = HostWindow::create(&context)?;
     context.window.set(window.0);
     context.menu_probe.set(options.menu_probe);
     let ui = UiSender::new(sender, window.0 as usize);
+    let hotkey_messages = if options.mode == Mode::Real {
+        Some(super::hotkey_messages::HotkeyMessages::install(ui.clone())?)
+    } else {
+        None
+    };
+    let hotkeys = if options.mode == Mode::Real {
+        let (keys, error) = hotkeys::register();
+        context.hotkey_error.set(error);
+        keys
+    } else {
+        None
+    };
     if !options.headless {
-        *context.tray.borrow_mut() = Some(tray(ui.clone())?);
+        *context.tray.borrow_mut() = Some(tray_for_mode(
+            ui.clone(),
+            options.mode,
+            context.hotkey_error.get(),
+        )?);
     }
-    if let Some(duration) = options.exit_after
-        && unsafe {
-            SetTimer(
-                window.0,
-                TIMER_DURATION,
-                duration.as_millis().clamp(100, 60_000) as u32,
-                None,
-            )
-        } == 0
-    {
-        return Err(last("SetTimer duration"));
+    window.configure_timers(&options)?;
+    server.start(identity, ui.clone(), options.mode)?;
+    if options.mode == Mode::Real {
+        context.initialize_real();
     }
     // Readiness is serviced only after the UI/tray/controller has been initialized.
-    server.start(identity, ui.clone())?;
-    let mut message: MSG = unsafe { mem::zeroed() };
-    let run_result = loop {
-        let result = unsafe { GetMessageW(&mut message, ptr::null_mut(), 0, 0) };
-        if result == -1 {
-            break Err(last("GetMessage"));
-        }
-        if result == 0 {
-            break Ok(());
-        }
-        unsafe {
-            TranslateMessage(&message);
-            DispatchMessageW(&message);
-        }
-    };
+    let run_result = super::message_loop::run();
+    if !context.quitting.get()
+        && let Err(error) = context.controller.borrow_mut().execute(Command::Quit)
+    {
+        eprintln!("TerminalHUD emergency restoration failed: {error}");
+    }
     // Workers are cancelled/joined before removing their wake target. The server
     // retains its first-instance pipe handle until after the icon/window disappear.
+    drop(hotkeys);
+    drop(hotkey_messages);
     ui.stop();
     server.stop();
     drop(context.tray.borrow_mut().take());

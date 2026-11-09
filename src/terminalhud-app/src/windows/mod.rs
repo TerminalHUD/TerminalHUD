@@ -1,4 +1,5 @@
 //! Platform application composition; portable cores contain no Windows types.
+pub mod development;
 pub mod host;
 pub mod ipc;
 mod native;

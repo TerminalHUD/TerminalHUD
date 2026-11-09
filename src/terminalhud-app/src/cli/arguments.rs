@@ -1,6 +1,7 @@
+use crate::mode::{Mode, REAL_INSTANCE};
+use std::path::PathBuf;
 use terminalhud_core::Command;
-
-pub const USAGE: &str = "Usage: terminalhud --prototype [--instance NAME] run|status|interaction-toggle|visibility-toggle|passive|quit";
+pub const USAGE: &str = "Usage: terminalhud [--development MANIFEST | --prototype [--instance NAME]] run|status|interaction-toggle|visibility-toggle|passive|quit";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
     Help,
@@ -9,46 +10,68 @@ pub enum Action {
 }
 pub struct Arguments {
     pub instance: String,
+    pub mode: Mode,
+    pub development: Option<PathBuf>,
     pub action: Action,
 }
 pub fn parse(mut args: Vec<String>) -> Result<Arguments, String> {
+    let mut result = Arguments {
+        instance: REAL_INSTANCE.into(),
+        mode: Mode::Real,
+        development: None,
+        action: Action::Help,
+    };
     if args.as_slice() == ["--help"] {
-        return Ok(Arguments {
-            instance: "default".into(),
-            action: Action::Help,
-        });
+        return Ok(result);
     }
-    if args.first().is_none_or(|a| a != "--prototype") {
-        return Err("real HUD composition is not available yet; use --prototype for the explicit simulated shell".into());
-    }
-    args.remove(0);
-    let mut instance = "default".to_string();
-    if args.first().is_some_and(|a| a == "--instance") {
-        if args.len() < 2 {
-            return Err("missing instance".into());
+    if args.first().is_some_and(|a| a == "--prototype") {
+        args.remove(0);
+        result.mode = Mode::Prototype;
+        result.instance = "default".into();
+        if args.first().is_some_and(|a| a == "--instance") {
+            if args.len() < 2 {
+                return Err("missing instance".into());
+            }
+            result.instance = args.remove(1);
+            args.remove(0);
         }
-        instance = args.remove(1);
+        validate_instance(&result.instance)?;
+    } else if args.first().is_some_and(|a| a == "--development") {
+        if args.len() < 2 {
+            return Err("missing development manifest".into());
+        }
+        result.development = Some(PathBuf::from(args.remove(1)));
         args.remove(0);
     }
-    if instance.is_empty()
-        || instance.len() > 32
-        || !instance
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
-    {
-        return Err("invalid prototype instance".into());
-    }
     if args.len() != 1 {
-        return Err("expected exactly one prototype command; see --help".into());
+        return Err("expected exactly one command; see --help".into());
     }
-    let action = match args[0].as_str() {
+    result.action = match args[0].as_str() {
         "run" => Action::Run,
         "status" => Action::Command(Command::Status),
         "interaction-toggle" => Action::Command(Command::InteractionToggle),
         "visibility-toggle" => Action::Command(Command::VisibilityToggle),
         "passive" => Action::Command(Command::Passive),
         "quit" => Action::Command(Command::Quit),
-        _ => return Err("unknown prototype command".into()),
+        _ => return Err("unknown command".into()),
     };
-    Ok(Arguments { instance, action })
+    if result.action == Action::Run && result.mode == Mode::Real && result.development.is_none() {
+        return Err("real development run requires --development MANIFEST; installed profile recognition is not implemented".into());
+    }
+    if result.development.is_some() && result.action != Action::Run {
+        return Err("--development is only used with run".into());
+    }
+    Ok(result)
+}
+pub fn validate_instance(instance: &str) -> Result<(), String> {
+    if instance.is_empty()
+        || instance.len() > 32
+        || instance == REAL_INSTANCE
+        || !instance
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    {
+        return Err("invalid/reserved prototype instance".into());
+    }
+    Ok(())
 }

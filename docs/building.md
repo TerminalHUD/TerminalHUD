@@ -32,9 +32,9 @@ for portable checks but does not establish native Windows behavior.
 
 This is the long-term architecture in [architecture.md](architecture.md), with
 Windows components implemented first. Future platform backends and adapters fit
-alongside these paths. The application shell provides an explicit simulated prototype. Real Windows
-Terminal composition is a separate integration task; the prototype creates no
-terminal window. See [application shell](application-shell.md) for its commands
+alongside these paths. The application shell provides an explicit simulated prototype and a real
+[Windows development slice](windows-development-slice.md). The prototype creates
+no terminal window. See [application shell](application-shell.md) for its commands
 and security boundary.
 
 `python3 scripts/check_workspace.py` obtains Cargo metadata and validates the
@@ -136,7 +136,9 @@ or prints an error to stderr and exits 2. `run` starts its sibling
 `terminalhud-shell.exe`, waits for an authenticated controller status reply, and
 returns. The shell binary uses the Windows GUI subsystem, owns the tray and
 message loop, and creates no console or visible main window. Ship the two
-binaries together. Both require `--prototype`; these commands simulate HUD state.
+binaries together. The commands above use `--prototype` and simulate HUD state. See the
+[real development guide](windows-development-slice.md) for the isolated native
+runtime manifest and real commands.
 A native PowerShell call made through `powershell.exe -NoProfile` from WSL also
 waits for the console CLI and preserves its captured stdout and exit code.
 

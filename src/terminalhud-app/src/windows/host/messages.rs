@@ -1,4 +1,6 @@
-use super::{MENU_PROBE_MESSAGE, TIMER_DURATION, TIMER_QUIT, WM_WAKE, context::HostContext};
+use super::{
+    MENU_PROBE_MESSAGE, TIMER_DURATION, TIMER_QUIT, TIMER_REFRESH, WM_WAKE, context::HostContext,
+};
 use windows_sys::Win32::{Foundation::*, UI::WindowsAndMessaging::*};
 pub(super) unsafe extern "system" fn window_proc(
     hwnd: HWND,
@@ -20,11 +22,14 @@ pub(super) unsafe extern "system" fn window_proc(
     if !context.is_null()
         && (message == WM_WAKE
             || message == WM_CLOSE
-            || (message == WM_TIMER && (wparam == TIMER_DURATION || wparam == TIMER_QUIT)))
+            || (message == WM_TIMER
+                && (wparam == TIMER_DURATION || wparam == TIMER_QUIT || wparam == TIMER_REFRESH)))
     {
         // Shared access only: actual controller access is guarded inside dispatch.
         let context = unsafe { &*context };
-        if message != WM_WAKE {
+        if message == WM_TIMER && wparam == TIMER_REFRESH {
+            context.refresh_requested.set(true);
+        } else if message != WM_WAKE {
             context.close_requested.set(true);
         }
         context.dispatch();
