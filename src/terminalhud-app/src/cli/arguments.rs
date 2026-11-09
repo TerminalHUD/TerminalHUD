@@ -1,13 +1,14 @@
 use crate::mode::{Mode, REAL_INSTANCE};
 use std::path::PathBuf;
 use terminalhud_core::Command;
-pub const USAGE: &str = "Usage: terminalhud [--development MANIFEST | --prototype [--instance NAME]] run|status|interaction-toggle|visibility-toggle|passive|quit\n       terminalhud config path|validate|open";
+pub const USAGE: &str = "Usage: terminalhud [--development MANIFEST | --prototype [--instance NAME]] run|status|interaction-toggle|visibility-toggle|passive|quit\n       terminalhud config path|validate|open|reload";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
     Help,
     Run,
     Command(Command),
     Config(super::configuration::ConfigCommand),
+    ReloadConfiguration,
 }
 pub struct Arguments {
     pub instance: String,
@@ -26,7 +27,11 @@ pub fn parse(mut args: Vec<String>) -> Result<Arguments, String> {
         return Ok(result);
     }
     if args.first().is_some_and(|a| a == "config") {
-        result.action = Action::Config(super::configuration::parse(&args[1..])?);
+        result.action = if args.as_slice() == ["config", "reload"] {
+            Action::ReloadConfiguration
+        } else {
+            Action::Config(super::configuration::parse(&args[1..])?)
+        };
         return Ok(result);
     }
     if args.first().is_some_and(|a| a == "--prototype") {

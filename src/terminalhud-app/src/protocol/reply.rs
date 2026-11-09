@@ -7,6 +7,7 @@ pub enum ReplyCode {
     Malformed,
     TransitionFailed,
     ShuttingDown,
+    RequiresRelaunch,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -32,6 +33,7 @@ impl Reply {
             ReplyCode::Malformed => 1,
             ReplyCode::TransitionFailed => 2,
             ReplyCode::ShuttingDown => 3,
+            ReplyCode::RequiresRelaunch => 4,
         };
         frame[5] = match self.mode {
             Mode::Prototype => 1,
@@ -77,6 +79,7 @@ impl Reply {
             1 => ReplyCode::Malformed,
             2 => ReplyCode::TransitionFailed,
             3 => ReplyCode::ShuttingDown,
+            4 => ReplyCode::RequiresRelaunch,
             _ => return Err("unknown reply code"),
         };
         let availability = match frame[6] {
