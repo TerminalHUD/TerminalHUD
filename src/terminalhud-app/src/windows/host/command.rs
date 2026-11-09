@@ -17,7 +17,7 @@ impl HostContext {
         let code = if self.quitting.get() {
             ReplyCode::ShuttingDown
         } else if self.requires_configuration
-            && self.configuration.borrow().is_none()
+            && !self.launch_ready.get()
             && matches!(
                 command,
                 Command::InteractionToggle | Command::VisibilityToggle

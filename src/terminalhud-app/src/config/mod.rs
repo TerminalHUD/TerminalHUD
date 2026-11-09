@@ -1,4 +1,6 @@
 //! Validated JSON, bounded settings files and platform document operations.
+#[cfg(any(windows, test))]
+pub(crate) mod bootstrap;
 mod codec;
 #[cfg(any(windows, test))]
 pub(crate) mod hotkey_transaction;
