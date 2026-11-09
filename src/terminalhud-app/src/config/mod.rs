@@ -1,4 +1,4 @@
-//! Strict JSON candidates; no filesystem access or runtime application.
+//! Validated JSON, bounded settings files and platform document operations.
 mod codec;
 mod object;
 mod policy;

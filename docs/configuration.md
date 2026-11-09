@@ -105,7 +105,7 @@ Local App Data known folder (including folder redirection). Resolution uses no
 folder-creation flag. The usual location is the path at the top of this page.
 Neither `path` nor `validate` creates directories or files.
 
-`validate` reads at most 1 MiB of UTF-8 JSON and applies the strict schema above.
+`validate` accepts files up to 1 MiB of UTF-8 JSON and applies the strict schema.
 Missing, unreadable, oversized, invalid UTF-8 and invalid configuration files are
 errors. LF and CRLF are accepted. A successful command prints the validated path;
 it does not apply any preferences or alter file contents.
