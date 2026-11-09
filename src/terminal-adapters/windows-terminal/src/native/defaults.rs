@@ -1,5 +1,5 @@
 use super::{NativeError, command::wide, error::last};
-use std::{path::Path, ptr::null};
+use std::path::Path;
 use windows_sys::Win32::{
     Foundation::{FreeLibrary, HMODULE},
     System::LibraryLoader::*,
@@ -36,7 +36,8 @@ pub fn read_inbox_defaults(terminal_executable: &Path) -> Result<String, NativeE
         return Err(last("LoadLibraryExW Terminal settings data"));
     }
     let module = ResourceModule(module);
-    let resource = unsafe { FindResourceW(module.0, 101usize as *const u16, RT_RCDATA) };
+    let resource =
+        unsafe { FindResourceW(module.0, 101usize as *const u16, 10usize as *const u16) };
     if resource.is_null() {
         return Err(last("FindResourceW Terminal defaults"));
     }
@@ -51,7 +52,7 @@ pub fn read_inbox_defaults(terminal_executable: &Path) -> Result<String, NativeE
         return Err(last("LoadResource Terminal defaults"));
     }
     let bytes = unsafe { LockResource(loaded) };
-    if bytes == null() {
+    if bytes.is_null() {
         return Err(last("LockResource Terminal defaults"));
     }
     let bytes = unsafe { std::slice::from_raw_parts(bytes.cast::<u8>(), length) };

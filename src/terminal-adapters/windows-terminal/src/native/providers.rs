@@ -47,7 +47,7 @@ fn string(key: HKEY, name: &str) -> Result<String, NativeError> {
     if status != ERROR_SUCCESS {
         return Err(NativeError::Win32("RegGetValueW provider size", status));
     }
-    if bytes < 2 || bytes > 65536 || bytes % 2 != 0 {
+    if !(2..=65536).contains(&bytes) || bytes % 2 != 0 {
         return Err(NativeError::Invalid("invalid provider string size"));
     }
     let mut value = vec![0u16; bytes as usize / 2];
@@ -240,11 +240,26 @@ fn powershell() -> Result<Vec<GeneratedProfile<'static>>, NativeError> {
 }
 
 fn dynamic_guid(name: &str) -> Result<Guid, NativeError> {
-    // Terminal team's UUIDv5 namespace in network byte order; UTF-16LE name.
-    let mut data = vec![
-        0x2b, 0xde, 0x4a, 0x90, 0xd0, 0x5f, 0x40, 0x1c, 0x94, 0x92, 0xe4, 0x08, 0x84, 0xea, 0xd1,
-        0xd8,
-    ];
+    guid_from_bytes(uuid5(
+        [
+            0x2b, 0xde, 0x4a, 0x90, 0xd0, 0x5f, 0x40, 0x1c, 0x94, 0x92, 0xe4, 0x08, 0x84, 0xea,
+            0xd1, 0xd8,
+        ],
+        name,
+    )?)
+}
+pub(super) fn fragment_guid(namespace: &str, name: &str) -> Result<Guid, NativeError> {
+    let namespace = uuid5(
+        [
+            0xf6, 0x5d, 0xdb, 0x7e, 0x70, 0x6b, 0x44, 0x99, 0x8a, 0x50, 0x40, 0x31, 0x3c, 0xaf,
+            0x51, 0x0a,
+        ],
+        namespace,
+    )?;
+    guid_from_bytes(uuid5(namespace, name)?)
+}
+fn uuid5(namespace: [u8; 16], name: &str) -> Result<[u8; 16], NativeError> {
+    let mut data = namespace.to_vec();
     for unit in name.encode_utf16() {
         data.extend(unit.to_le_bytes());
     }
@@ -274,6 +289,9 @@ fn dynamic_guid(name: &str) -> Result<Guid, NativeError> {
     }
     hash[6] = (hash[6] & 0x0f) | 0x50;
     hash[8] = (hash[8] & 0x3f) | 0x80;
+    Ok(hash[..16].try_into().expect("UUID length"))
+}
+fn guid_from_bytes(hash: [u8; 16]) -> Result<Guid, NativeError> {
     let hex: String = hash[..16].iter().map(|b| format!("{b:02x}")).collect();
     Guid::parse(&format!(
         "{}-{}-{}-{}-{}",

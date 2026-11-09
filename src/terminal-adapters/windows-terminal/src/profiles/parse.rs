@@ -23,7 +23,7 @@ pub(super) fn ast_document(text: &str) -> Result<jsonc_parser::ast::Value<'_>, E
     unique_keys(&value)?;
     Ok(value)
 }
-pub(super) fn document(text: &str) -> Result<Map<String, Value>, Error> {
+pub(crate) fn document(text: &str) -> Result<Map<String, Value>, Error> {
     let text = text.trim_start_matches('\u{feff}');
     ast_document(text)?;
     let value: Value = jsonc_parser::parse_to_serde_value(text, &Default::default())
