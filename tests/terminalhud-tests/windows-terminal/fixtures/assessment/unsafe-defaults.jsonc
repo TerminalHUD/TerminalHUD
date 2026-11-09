@@ -1,0 +1,18 @@
+{
+  "defaultProfile": "{01234567-89ab-4cde-8fab-012345678902}",
+  "profiles": {
+    "defaults": {
+      "elevate": true,
+      "connectionType": "{01234567-89ab-4cde-8fab-012345678903}",
+      "opacity": 90,
+      "useAcrylic": true,
+      "environment": {"HUD_FIXTURE": "defaults"},
+      "unfocusedAppearance": {"opacity": 80}
+    },
+    "list": [{
+      "guid": "{01234567-89ab-4cde-8fab-012345678902}",
+      "name": "Ordinary default",
+      "commandline": "pwsh.exe"
+    }]
+  }
+}
