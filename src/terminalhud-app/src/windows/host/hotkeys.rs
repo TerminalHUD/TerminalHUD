@@ -1,5 +1,8 @@
-//! UI-thread-owned shortcut registrations. New chords are prepared before old ones are released.
+//! UI-thread-owned shortcut registrations and message routing.
 use super::{UiMessage, UiSender, hotkey_binding::binding};
+use crate::config::hotkey_transaction::{
+    HotkeyPlatform, HotkeyTransaction, Prepared, RegisterError,
+};
 use hudswitch_windows::{HotkeyFailure, Hotkeys};
 use std::cell::RefCell;
 use terminalhud_core::{
@@ -7,139 +10,52 @@ use terminalhud_core::{
     config::{Configuration, Shortcut},
 };
 
-const FIRST_ID: i32 = 0x5448;
-const LAST_ID: i32 = 0x54ff;
 thread_local! { static ACTIONS: RefCell<Vec<(i32, Command)>> = const { RefCell::new(Vec::new()) }; }
-struct Entry {
-    shortcut: Shortcut,
-    id: i32,
-    guard: Hotkeys,
+pub(super) struct Native;
+impl HotkeyPlatform for Native {
+    type Guard = Hotkeys;
+    fn register(
+        &mut self,
+        id: i32,
+        shortcut: &Shortcut,
+    ) -> Result<Hotkeys, RegisterError<Hotkeys>> {
+        Hotkeys::register(&[binding(id, shortcut)]).map_err(|mut error| {
+            let code = match &error.failure {
+                HotkeyFailure::Win32 { code, .. } => *code,
+                _ => u32::MAX,
+            };
+            let message = error.to_string();
+            RegisterError {
+                message,
+                code,
+                remaining: error.remaining.take(),
+            }
+        })
+    }
+    fn unregister(&mut self, guard: &mut Hotkeys) -> Result<(), String> {
+        guard.unregister().map_err(|errors| format!("{errors:?}"))
+    }
 }
-pub(super) struct Prepared(Vec<Entry>);
-
-pub(super) struct Registrations {
-    entries: Vec<Entry>,
-    stranded: Vec<Hotkeys>,
-    error_code: u32,
-}
+pub(super) struct Registrations(HotkeyTransaction<Native>);
 impl Registrations {
     pub(super) fn new() -> Self {
-        Self {
-            entries: Vec::new(),
-            stranded: Vec::new(),
-            error_code: 0,
-        }
+        Self(HotkeyTransaction::new(Native))
     }
-    pub(super) fn prepare(&mut self, config: &Configuration) -> Result<Prepared, String> {
-        let mut prepared = Vec::new();
-        let existing: Vec<_> = self.entries.iter().map(|entry| &entry.shortcut).collect();
-        for shortcut in new_shortcuts(&existing, config) {
-            let id = (FIRST_ID..=LAST_ID)
-                .find(|id| {
-                    !self.entries.iter().any(|e| e.id == *id)
-                        && !prepared.iter().any(|e: &Entry| e.id == *id)
-                        && !self
-                            .stranded
-                            .iter()
-                            .any(|g| g.bindings().iter().any(|b| b.id == *id))
-                })
-                .ok_or("hotkey IDs exhausted");
-            let id = match id {
-                Ok(id) => id,
-                Err(error) => {
-                    let cleanup = self.cancel(Prepared(prepared));
-                    return Err(format!("{error}; cleanup: {cleanup:?}"));
-                }
-            };
-            match Hotkeys::register(&[binding(id, &shortcut)]) {
-                Ok(guard) => prepared.push(Entry {
-                    shortcut,
-                    id,
-                    guard,
-                }),
-                Err(mut error) => {
-                    self.error_code = match &error.failure {
-                        HotkeyFailure::Win32 { code, .. } => *code,
-                        _ => u32::MAX,
-                    };
-                    if let Some(guard) = error.remaining.take() {
-                        self.stranded.push(guard);
-                    }
-                    let mut cleanup = Vec::new();
-                    for mut entry in prepared {
-                        if let Err(errors) = entry.guard.unregister() {
-                            cleanup.extend(errors);
-                            self.stranded.push(entry.guard);
-                        }
-                    }
-                    return Err(format!(
-                        "hotkey registration failed: {error}; cleanup failures: {cleanup:?}"
-                    ));
-                }
-            }
-        }
-        Ok(Prepared(prepared))
+    pub(super) fn prepare(&mut self, config: &Configuration) -> Result<Prepared<Hotkeys>, String> {
+        self.0.prepare(config)
     }
-    pub(super) fn cancel(&mut self, prepared: Prepared) -> Vec<HotkeyFailure> {
-        let mut failures = Vec::new();
-        for mut entry in prepared.0 {
-            if let Err(errors) = entry.guard.unregister() {
-                failures.extend(errors);
-                self.stranded.push(entry.guard);
-            }
-        }
-        failures
+    pub(super) fn cancel(&mut self, prepared: Prepared<Hotkeys>) -> Vec<String> {
+        self.0.cancel(prepared)
     }
     pub(super) fn commit(
         &mut self,
-        prepared: Prepared,
+        prepared: Prepared<Hotkeys>,
         config: &Configuration,
     ) -> Result<(), String> {
-        let desired = [
-            (config.toggle_interaction(), Command::InteractionToggle),
-            (config.toggle_visibility(), Command::VisibilityToggle),
-        ];
-        self.entries.extend(prepared.0);
-        let mut actions = Vec::new();
-        for (shortcut, command) in desired {
-            actions.push((
-                self.entries
-                    .iter()
-                    .find(|e| e.shortcut == *shortcut)
-                    .expect("prepared chord")
-                    .id,
-                command,
-            ));
-        }
-        ACTIONS.with(|mapping| *mapping.borrow_mut() = actions);
-        let mut failures = Vec::new();
-        let mut keep = Vec::new();
-        for mut entry in self.entries.drain(..) {
-            if config.toggle_interaction() == &entry.shortcut
-                || config.toggle_visibility() == &entry.shortcut
-            {
-                keep.push(entry);
-            } else if let Err(errors) = entry.guard.unregister() {
-                failures.extend(errors);
-                self.stranded.push(entry.guard);
-            }
-        }
-        self.entries = keep;
-        if failures.is_empty() {
-            Ok(())
-        } else {
-            Err(format!(
-                "hotkey bindings changed, but old registrations could not be released: {failures:?}"
-            ))
-        }
+        let result = self.0.commit(prepared, config);
+        ACTIONS.with(|actions| *actions.borrow_mut() = self.0.actions().to_vec());
+        result
     }
-}
-fn new_shortcuts(existing: &[&Shortcut], config: &Configuration) -> Vec<Shortcut> {
-    [config.toggle_interaction(), config.toggle_visibility()]
-        .into_iter()
-        .filter(|shortcut| !existing.contains(shortcut))
-        .cloned()
-        .collect()
 }
 impl Drop for Registrations {
     fn drop(&mut self) {
@@ -157,7 +73,7 @@ pub(super) fn register() -> (Registrations, u32) {
         eprintln!(
             "TerminalHUD shortcut registration failed: {error}; tray and IPC remain available"
         );
-        let code = keys.error_code;
+        let code = keys.0.error_code;
         (keys, if code == 0 { u32::MAX } else { code })
     } else {
         (keys, 0)
@@ -182,7 +98,6 @@ pub(super) fn enqueue(id: usize, ui: &UiSender) -> bool {
     }
     true
 }
-
 #[cfg(test)]
 pub(super) fn set_test_actions(actions: Vec<(i32, Command)>) {
     ACTIONS.with(|current| *current.borrow_mut() = actions);

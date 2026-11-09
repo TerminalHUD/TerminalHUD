@@ -46,7 +46,10 @@ fn run_with_config(
         if reply.mode != args.mode {
             return Err("runtime mode mismatch; command outcome is ambiguous".into());
         }
-        if reply.code != crate::protocol::ReplyCode::Ok {
+        if !matches!(
+            reply.code,
+            crate::protocol::ReplyCode::Ok | crate::protocol::ReplyCode::RequiresRelaunch
+        ) {
             return Err(format!(
                 "command rejected: {:?}; {}",
                 reply.code,

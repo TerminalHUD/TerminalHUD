@@ -53,17 +53,34 @@ impl HostContext {
         }
     }
     pub(super) fn reload_configuration(&self, reply: Option<mpsc::SyncSender<Reply>>) {
-        let result = self.apply_configuration();
-        let code = if self.report_configuration(result) {
-            ReplyCode::Ok
-        } else {
-            ReplyCode::TransitionFailed
+        let code = match self.apply_configuration() {
+            Ok(effect) => {
+                let (code, message) = match effect {
+                    LaunchPreferenceEffect::Applied => (ReplyCode::Ok, "Configuration applied"),
+                    LaunchPreferenceEffect::RequiresRelaunch => (
+                        ReplyCode::RequiresRelaunch,
+                        "Configuration applied; terminal appearance changes require the next launch",
+                    ),
+                };
+                self.report_configuration(Ok(message.into()));
+                if effect == LaunchPreferenceEffect::RequiresRelaunch
+                    && let Some(tray) = self.tray.borrow().as_ref()
+                {
+                    let _ = tray
+                        .set_tooltip(Some("TerminalHUD — terminal changes apply on next launch"));
+                }
+                code
+            }
+            Err(error) => {
+                self.report_configuration(Err(error));
+                ReplyCode::TransitionFailed
+            }
         };
         if let Some(sender) = reply {
             let _ = sender.send(self.reply(code, false));
         }
     }
-    fn apply_configuration(&self) -> Result<String, String> {
+    fn apply_configuration(&self) -> Result<LaunchPreferenceEffect, String> {
         let launch = self
             .launch_preferences
             .as_ref()
@@ -76,7 +93,7 @@ impl HostContext {
         &self,
         candidate: Configuration,
         launch: &dyn super::launch_preferences::LaunchPreferences,
-    ) -> Result<String, String> {
+    ) -> Result<LaunchPreferenceEffect, String> {
         let previous = self.configuration.borrow();
         if previous
             .as_ref()
@@ -106,11 +123,6 @@ impl HostContext {
         }
         drop(previous);
         *self.configuration.borrow_mut() = Some(candidate);
-        Ok(match effect {
-            LaunchPreferenceEffect::Applied => "Configuration applied".into(),
-            LaunchPreferenceEffect::RequiresRelaunch => {
-                "Configuration applied; terminal appearance changes require the next launch".into()
-            }
-        })
+        Ok(effect)
     }
 }

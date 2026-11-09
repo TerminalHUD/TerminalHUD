@@ -104,3 +104,26 @@ fn reload_has_its_own_opcode_without_changing_commands() {
     assert_eq!(frame[4], 6);
     assert_eq!(decode_request(&frame), Ok(Request::ReloadConfiguration));
 }
+
+#[test]
+fn pending_launch_is_an_explicit_success_reply() {
+    let reply = Reply {
+        code: ReplyCode::RequiresRelaunch,
+        mode: crate::mode::Mode::Real,
+        hotkey_error: 0,
+        status: Status {
+            availability: Availability::Absent,
+            state: None,
+            target_id: None,
+        },
+        focus_warning: false,
+        sequence: 1,
+        menu_commands: 0,
+        process_id: 123,
+        host_console: false,
+    };
+    assert_eq!(
+        Reply::decode(&reply.encode()).unwrap().code,
+        ReplyCode::RequiresRelaunch
+    );
+}

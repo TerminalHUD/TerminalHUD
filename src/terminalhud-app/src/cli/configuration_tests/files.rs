@@ -87,3 +87,14 @@ fn unreadable_file_reports_an_error_without_modifying_contents() {
     drop(exclusive);
     assert_eq!(fs::read(&fixture.path).unwrap(), b"{\"version\":1}");
 }
+
+#[test]
+fn corrected_file_can_be_validated_after_a_failure() {
+    let fixture = Fixture::new();
+    fixture.write(b"invalid settings");
+    assert!(crate::config::validate_file(&fixture.path).is_err());
+    assert_eq!(fs::read(&fixture.path).unwrap(), b"invalid settings");
+    fixture.write(b"{\"version\":1,\"hotkeys\":{\"toggleInteraction\":\"Ctrl+A\"}}");
+    let config = crate::config::validate_file(&fixture.path).unwrap();
+    assert_eq!(config.toggle_interaction().to_string(), "Ctrl+A");
+}
