@@ -56,6 +56,10 @@ jobs:
         run: cargo build --workspace --all-targets --locked
       - name: Run workspace tests
         run: cargo test --workspace --locked
+      - name: Test Windows packaging with temporary files and fake registry
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./packaging/windows/tests/packaging.tests.ps1
       - name: Run native toolchain probe
         run: cargo run --locked -p hudswitch-windows --example toolchain-probe
 
