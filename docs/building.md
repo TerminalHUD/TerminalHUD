@@ -138,7 +138,9 @@ returns. The shell binary uses the Windows GUI subsystem, owns the tray and
 message loop, and creates no console or visible main window. Ship the two
 binaries together. The commands above use `--prototype` and simulate HUD state. See the
 [real development guide](windows-development-slice.md) for the isolated native
-runtime manifest and real commands.
+runtime manifest and real commands. The production path targets installed Windows
+Terminal and has a separate proposed, explicitly approved profile setup; see the
+[application shell guide](application-shell.md).
 A native PowerShell call made through `powershell.exe -NoProfile` from WSL also
 waits for the console CLI and preserves its captured stdout and exit code.
 

@@ -11,6 +11,25 @@ fresh target, including an absent-target visibility toggle. Existing targets
 retain Passive/Hidden behavior; an absent `passive` request does not create one.
 This prototype demonstrates command policy only, not real window behavior.
 
+## Installed Terminal path
+
+The production host uses a uniquely named window in the installed Windows
+Terminal and may share its owner process with ordinary Terminal windows. The
+selected profile is prepared separately from the prototype. The proposed owned
+profile setup in [ADR 0011](decisions/0011-owned-profile-entries.md) requires
+explicit approval before use on real settings. `terminalhud profiles plan` is
+read-only; `terminalhud profiles apply` writes the receipt-owned entry with a
+backup and pending journal. A changed or removed owned entry is a conflict.
+After setup, a configuration reload can update that entry without closing a live
+session. When the selected launch or appearance changes, the reply reports that
+it takes effect on the next launch.
+
+The bridge checks the profile and session before starting the selected shell and
+keeps recovery available if the tray exits. An already-running Terminal may need
+to reload settings before recognizing the profile; a failed handshake leaves
+any newly created window unmanaged and does not close other sessions. This path
+still requires native installed-Terminal and shell-preservation validation.
+
 ## Running
 
 Build both binaries as described in [building.md](building.md). From native

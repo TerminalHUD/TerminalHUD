@@ -10,8 +10,8 @@ try {
     function Get-ShortcutPath { return $script:fixtureShortcut }
     $create = { param($path, $target) [IO.File]::WriteAllText($path, $target) }
     $package = Join-Path $temp 'package'; $root = Join-Path $temp 'user\install'
-    $null = New-Item -ItemType Directory -Path (Join-Path $package 'runtime\LICENSES') -Force
-    $paths = @('terminalhud.exe', 'terminalhud-shell.exe', 'BUILD-INFO.json', 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'runtime/runtime.json', 'runtime/LICENSES/LICENSE')
+    $null = New-Item -ItemType Directory -Path $package
+    $paths = @('terminalhud.exe', 'terminalhud-shell.exe', 'BUILD-INFO.json', 'LICENSE', 'THIRD-PARTY-NOTICES.txt')
     foreach ($path in $paths) { [IO.File]::WriteAllText((Join-Path $package $path), "fixture:$path") }
     $files = @($paths | ForEach-Object { [pscustomobject]@{ path = $_; sha256 = Get-FileDigest (Join-Path $package $_) } })
     $manifest = [pscustomobject]@{ schema_version = 1; product = 'TerminalHUD'; version = '0.1.0'; source_commit = ('a' * 40); build_id = 'fixture1'; files = $files }

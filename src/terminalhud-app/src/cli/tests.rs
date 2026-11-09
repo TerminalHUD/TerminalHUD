@@ -66,3 +66,21 @@ fn passive_never_starts_the_gui_when_the_owner_is_absent() {
     );
     assert_eq!(result.unwrap_err(), "owner unavailable");
 }
+
+#[test]
+fn installed_profile_setup_is_explicit() {
+    assert_eq!(
+        parse(vec!["profiles".into(), "plan".into()])
+            .unwrap()
+            .action,
+        Action::ProfilePlan
+    );
+    assert_eq!(
+        parse(vec!["profiles".into(), "apply".into()])
+            .unwrap()
+            .action,
+        Action::ProfileApply
+    );
+    assert!(parse(vec!["profiles".into()]).is_err());
+    assert!(parse(vec!["profiles".into(), "apply".into(), "extra".into()]).is_err());
+}

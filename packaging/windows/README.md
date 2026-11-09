@@ -1,8 +1,9 @@
 # Per-user Windows package
 
 This is a reviewable development package, not a public release. No command here
-needs elevation, changes PATH, edits settings, installs shell integrations, or
-kills a process. Native installation and startup application require the final
+needs elevation, changes PATH, installs shell integrations, or kills a process.
+Package staging and installation do not edit Terminal settings. The separate
+profile setup below would edit them only after explicit setup consent. Native installation and startup application require the final
 reviewed operator authorization. Do not change PowerShell execution policy to
 run these scripts; use an approved local checkout or signed distribution under
 your existing policy.
@@ -10,18 +11,14 @@ your existing policy.
 From native Windows PowerShell, build both release binaries and stage a package:
 
 ```powershell
-./packaging/windows/build.ps1 -RuntimePayload C:\reviewed-runtime -Output C:\staging\TerminalHUD
+./packaging/windows/build.ps1 -Output C:\staging\TerminalHUD
 ```
 
-The input directory must explicitly contain `runtime.json`, the chosen runtime
-payload, and its required license texts in `LICENSES/`. Packaging copies it
-without selecting or downloading a Terminal distribution. The production
-launcher owns the runtime manifest schema; a placeholder manifest does not make
-a usable package. The builder requires committed tracked source, identifies the
-source commit and development version in `BUILD-INFO.json`, gathers Rust
-dependency license texts,
-and refuses existing outputs. Review runtime redistribution rights and payload
-content before distribution. No release tag or version is published.
+The builder requires committed tracked source, records the source commit and
+development version in `BUILD-INFO.json`, gathers Rust dependency license texts,
+and refuses existing outputs. It does not bundle or download Windows Terminal;
+the installed Windows Terminal is required when using the application. No release
+tag or version is published.
 
 Plan installation without writing files or the registry:
 
@@ -34,17 +31,39 @@ the current user's Local App Data known folder (usually
 `%LOCALAPPDATA%\TerminalHUD\install`), never a system location. Existing
 `%LOCALAPPDATA%\TerminalHUD\settings.json` is preserved byte for byte. The
 manifest's `build_id` selects `install\versions\<build_id>`. Both executables,
-runtime files, licenses and installer scripts are copied there. A per-user Start menu shortcut named `TerminalHUD` launches the exact versioned
+licenses and installer scripts are copied there. A per-user Start menu shortcut named `TerminalHUD` launches the exact versioned
 GUI without arguments; its path, target and SHA-256 are receipt-recorded.
 Unowned or modified shortcuts conflict and are preserved.
 
 Launch TerminalHUD from the Start menu, or the installed `terminalhud-shell.exe` in that version directory with no
 arguments, or use its sibling `terminalhud.exe` for commands. The CLI and GUI
-must remain together. Normal production launch requires the production launcher
-and configuration work to be integrated; the development/prototype commands are
-not install entry points. The first normal launch applies `start_with_windows`
+must remain together. The installed path requires the separate profile setup
+below; development/prototype commands are not install entry points. The first
+normal launch applies `start_with_windows`
 through the receipt-bound service. Installation itself never registers startup
 or launches the app.
+
+## Installed Terminal profile setup (proposed)
+
+The profile-storage decision in [ADR 0011](../../docs/decisions/0011-owned-profile-entries.md)
+is proposed and requires explicit user approval before use against real settings.
+The local commands below prepare one separate TerminalHUD-owned profile while
+leaving ordinary profile bytes unchanged:
+
+```powershell
+terminalhud.exe profiles plan
+terminalhud.exe profiles apply
+```
+
+`plan` reads inputs and reports the intended operation. After review and approval,
+`apply` writes a staged replacement with an exact backup and a receipt for the
+owned entry. A pending journal or a modified/missing owned entry stops automatic
+updates. Keep backups and the receipt for recovery. After setup, configuration
+reload can update the unchanged owned entry; a live session is kept open and
+changes to its launch/appearance take effect on the next launch. An existing
+Terminal host may need a normal settings reload before it recognizes the profile.
+TerminalHUD never restarts or kills that shared host. Runtime behavior still needs
+validation with the installed Terminal and real session preservation.
 
 ## Startup ownership
 
@@ -65,7 +84,7 @@ last read and write cannot be excluded. No broader registry ownership is claimed
 ## Upgrade, uninstall, and cleanup
 
 Install a new package with a different build identity using the same plan/apply
-commands. A version directory is never overwritten; all older CLI/runtime files
+commands. A version directory is never overwritten; all older application files
 remain available to live terminals. The next normal GUI launch can update its
 owned startup command. Quit the old tray owner before launching the new one;
 upgrading does not terminate the tray or terminal sessions automatically.
@@ -111,7 +130,7 @@ hashes, and unowned install directories are rejected.
 
 `tests/packaging.tests.ps1` uses only a unique temporary directory and a fake
 startup value. Hosted Windows CI runs it under native PowerShell. The native builder CI check retains a seven-day review artifact containing
-real CLI/GUI binaries and an explicitly synthetic, nonlaunchable runtime fixture;
+real CLI/GUI binaries and no bundled Terminal runtime;
 it is not a distributable product or release. Native startup
 unit tests use fake values; no automated test changes the live Run key. A
 portable policy harness can also run with:
