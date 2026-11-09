@@ -46,13 +46,11 @@ pub fn run_host(options: HostOptions) -> io::Result<()> {
     } else {
         None
     };
-    let hotkeys = if options.mode == Mode::Real {
+    if options.mode == Mode::Real {
         let (keys, error) = hotkeys::register();
         context.hotkey_error.set(error);
-        keys
-    } else {
-        None
-    };
+        *context.hotkeys.borrow_mut() = Some(keys);
+    }
     if !options.headless {
         *context.tray.borrow_mut() = Some(tray_for_mode(
             ui.clone(),
@@ -74,7 +72,7 @@ pub fn run_host(options: HostOptions) -> io::Result<()> {
     }
     // Workers are cancelled/joined before removing their wake target. The server
     // retains its first-instance pipe handle until after the icon/window disappear.
-    drop(hotkeys);
+    drop(context.hotkeys.borrow_mut().take());
     drop(hotkey_messages);
     ui.stop();
     server.stop();

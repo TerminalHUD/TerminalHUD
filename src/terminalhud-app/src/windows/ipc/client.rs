@@ -111,6 +111,14 @@ fn exchange_to_process(
     write(pipe.raw(), b"THA1", None)?;
     Ok(reply)
 }
+pub fn call_request(instance: &str, request: crate::protocol::Request) -> io::Result<Reply> {
+    exchange(
+        &Identity::current()?,
+        instance,
+        &protocol::encode_request(request),
+    )
+}
+
 pub fn call(instance: &str, command: Command) -> io::Result<Reply> {
     exchange(
         &Identity::current()?,

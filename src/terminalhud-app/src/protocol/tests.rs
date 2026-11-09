@@ -22,7 +22,10 @@ fn malformed_frames_cannot_become_commands() {
         Command::Status,
         Command::Quit,
     ] {
-        assert_eq!(decode_request(&encode_request(command)), Ok(command));
+        assert_eq!(
+            decode_request(&encode_request(command)),
+            Ok(Request::Command(command))
+        );
     }
 }
 #[test]
@@ -84,4 +87,20 @@ fn real_mode_and_native_conflicts_survive_reply_without_becoming_prototype_succe
     let mut unknown = reply.encode();
     unknown[5] = 3;
     assert!(Reply::decode(&unknown).is_err());
+}
+
+#[test]
+fn reload_has_its_own_opcode_without_changing_commands() {
+    for (command, opcode) in [
+        (Command::InteractionToggle, 1),
+        (Command::VisibilityToggle, 2),
+        (Command::Passive, 3),
+        (Command::Status, 4),
+        (Command::Quit, 5),
+    ] {
+        assert_eq!(encode_request(command)[4], opcode);
+    }
+    let frame = encode_request(Request::ReloadConfiguration);
+    assert_eq!(frame[4], 6);
+    assert_eq!(decode_request(&frame), Ok(Request::ReloadConfiguration));
 }

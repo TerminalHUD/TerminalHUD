@@ -1,12 +1,15 @@
 //! One authoritative UI thread; producers enqueue, callbacks never recurse.
 mod arguments;
 mod command;
+mod configuration;
 mod context;
 mod controller;
 mod dispatch;
+mod hotkey_binding;
 mod hotkey_messages;
 mod hotkeys;
 mod initialize;
+pub(crate) mod launch_preferences;
 mod menu_probe;
 mod message_loop;
 mod messages;

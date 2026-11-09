@@ -98,7 +98,13 @@ the tray owner. Do not combine them with `--prototype`, `--instance` or
 terminalhud config path
 terminalhud config validate
 terminalhud config open
+terminalhud config reload
 ```
+
+`reload` sends a request to the running real host and reports failure if it cannot
+apply the settings. The isolated development host does not consume user settings
+and rejects reload. Production launch and startup registration are still being
+integrated; reload does not yet apply settings in the current development build.
 
 `path` prints the settings filename, resolved from the current user's Windows
 Local App Data known folder (including folder redirection). Resolution uses no

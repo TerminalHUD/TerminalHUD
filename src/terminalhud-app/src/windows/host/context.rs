@@ -1,11 +1,14 @@
 use super::UiMessage;
 use super::controller::RuntimeController;
+use super::hotkeys::Registrations;
+use super::launch_preferences::LaunchPreferences;
 use crate::mode::Mode;
 use std::{
     cell::{Cell, RefCell},
     io, ptr,
     sync::mpsc,
 };
+use terminalhud_core::config::Configuration;
 
 use tray_icon::TrayIcon;
 use windows_sys::Win32::Foundation::HWND;
@@ -14,6 +17,10 @@ pub(super) struct HostContext {
     pub(super) mode: Mode,
     pub(super) hotkey_error: Cell<u32>,
     pub(super) refresh_requested: Cell<bool>,
+    pub(super) hotkeys: RefCell<Option<Registrations>>,
+    pub(super) configuration: RefCell<Option<Configuration>>,
+    pub(super) launch_preferences: Option<Box<dyn LaunchPreferences>>,
+    pub(super) configuration_error: RefCell<Option<String>>,
     pub(super) last_command_error: RefCell<Option<String>>,
     pub(super) observation_error: RefCell<Option<String>>,
     pub(super) busy: Cell<bool>,
@@ -41,6 +48,10 @@ impl HostContext {
             refresh_requested: Cell::new(false),
             observation_error: RefCell::new(None),
             last_command_error: RefCell::new(None),
+            configuration_error: RefCell::new(None),
+            hotkeys: RefCell::new(None),
+            configuration: RefCell::new(None),
+            launch_preferences: None,
             busy: Cell::new(false),
             deferred: Cell::new(false),
             close_requested: Cell::new(false),

@@ -33,6 +33,11 @@ fn run_with_config(
         use crate::windows::ipc;
         let reply = match args.action {
             Action::Run => startup::ensure_running(&args)?,
+            Action::ReloadConfiguration => ipc::call_request(
+                &args.instance,
+                crate::protocol::Request::ReloadConfiguration,
+            )
+            .map_err(|e| e.to_string())?,
             Action::Command(command) => {
                 ipc::call(&args.instance, command).map_err(|e| e.to_string())?
             }
