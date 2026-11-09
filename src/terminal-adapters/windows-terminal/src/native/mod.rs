@@ -17,7 +17,7 @@ mod windows;
 pub use ancestry::ancestry;
 pub use error::NativeError;
 pub use identity::fresh_guid;
-pub use launch::{LauncherProcess, start, start_with_command};
+pub use launch::{LauncherProcess, start, start_with_command, start_with_command_and_environment};
 pub use process::ProcessIdentity;
 pub use verify::{VerifiedWindow, verify};
 pub use windows::windows;

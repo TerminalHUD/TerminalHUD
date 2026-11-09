@@ -292,3 +292,13 @@ settings updates. Successful disk preparation is not proof that an existing host
 has reloaded a profile. On GUID mismatch the bridge refuses to execute the shell;
 Terminal may already have opened an unmanaged fallback window. Report that case
 without killing a shared process or silently selecting another shell.
+
+An explicit bridge command changes Terminal's default environment policy to
+inherit, even when the selected profile normally reloads environment variables.
+`PreparedProfile::reload_environment` resolves
+`compatibility.reloadEnvironmentVariables` (built-in default `true`), and the
+installed launcher uses `start_with_command_and_environment` to emit exactly one
+`--reloadEnvironment` or `--inheritEnvironment` option before the bridge command.
+Existing launch entrypoints retain their previous argument behavior. See the
+[Microsoft command-line documentation](https://learn.microsoft.com/en-us/windows/terminal/command-line-arguments)
+and [pinned parser](https://github.com/microsoft/terminal/blob/7ff11ee107c984e236960ec948b450ccbc10187b/src/cascadia/TerminalApp/AppCommandlineArgs.cpp).
