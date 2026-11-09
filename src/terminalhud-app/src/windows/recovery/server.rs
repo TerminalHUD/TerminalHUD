@@ -97,9 +97,7 @@ fn serve(pipe: Handle) -> io::Result<()> {
             eprintln!("TerminalHUD recovery claim absent or target changed; recovery not confirmed")
         }
         Err(error) => {
-            return Err(io::Error::other(format!(
-                "input style recovery incomplete: {error}"
-            )));
+            return Err(io::Error::other(format!("recovery incomplete: {error}")));
         }
     }
     Ok(())

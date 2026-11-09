@@ -173,3 +173,47 @@ fn refused_enrollment_clears_marker_without_applying_styles() {
     assert!(unsafe { GetPropW(window.hwnd, backend.atom.key()) }.is_null());
     assert_eq!(exstyle(window.hwnd).unwrap(), before);
 }
+
+#[test]
+fn partial_recovery_failure_is_reported_and_keeps_claim() {
+    let window = HiddenWindow::new();
+    let claim = std::rc::Rc::new(std::cell::RefCell::new(None));
+    let mut backend = WindowsBackend::new(EnrolledLauncher {
+        receipt: Some(window.receipt()),
+        claim: claim.clone(),
+    })
+    .unwrap();
+    let acquired = backend.acquire(VisibleState::Active).unwrap();
+    let watch = RecoveryWatch::open(claim.borrow().unwrap()).unwrap();
+    set_style(&acquired.target, LAYER_BITS, LAYER_BITS).unwrap();
+    recovery::fail_after_input_once();
+    assert!(matches!(watch.restore(), Err(Error::Unsupported(_))));
+    assert_eq!(exstyle(window.hwnd).unwrap() & LAYER_BITS, 0);
+    assert_eq!(
+        unsafe { GetPropW(window.hwnd, backend.atom.key()) } as usize,
+        acquired.target.token
+    );
+    // The retained claim permits an explicit retry after a reported failure.
+    watch.restore().unwrap();
+}
+
+#[test]
+fn zero_token_cannot_claim_an_unmarked_window() {
+    let window = HiddenWindow::new();
+    let mut pid = 0;
+    let tid = unsafe { GetWindowThreadProcessId(window.hwnd, &mut pid) };
+    let before = exstyle(window.hwnd).unwrap();
+    let claim = RecoveryClaim {
+        hwnd: window.hwnd as usize,
+        pid,
+        tid,
+        token: 0,
+        exstyle: before,
+        visible: false,
+    };
+    assert!(matches!(
+        RecoveryWatch::open(claim),
+        Err(Error::InvalidTarget)
+    ));
+    assert_eq!(exstyle(window.hwnd).unwrap(), before);
+}

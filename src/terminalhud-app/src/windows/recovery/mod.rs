@@ -20,3 +20,6 @@ fn creation_time(process: windows_sys::Win32::Foundation::HANDLE) -> std::io::Re
     }
     Ok((u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime))
 }
+
+#[cfg(test)]
+mod tests;

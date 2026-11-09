@@ -1,6 +1,13 @@
 //! Independent watcher for an explicitly enrolled acquisition.
 use super::*;
 
+#[cfg(test)]
+thread_local! { static FAIL_AFTER_INPUT: Cell<bool> = const { Cell::new(false) }; }
+#[cfg(test)]
+pub(super) fn fail_after_input_once() {
+    FAIL_AFTER_INPUT.set(true);
+}
+
 /// Native claim sent to a trusted watcher while the acquiring process is alive.
 #[derive(Clone, Copy, Debug)]
 pub struct RecoveryClaim {
@@ -32,6 +39,9 @@ pub struct RecoveryWatch {
 impl RecoveryWatch {
     /// Open a claim received from the authenticated acquisition owner.
     pub fn open(claim: RecoveryClaim) -> Result<Self, Error> {
+        if claim.token == 0 {
+            return Err(Error::InvalidTarget);
+        }
         let handle = unsafe {
             OpenProcess(
                 PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
@@ -82,13 +92,21 @@ impl RecoveryWatch {
         if exstyle(self.target.window.hwnd)? & LAYER_BITS != self.original.exstyle & LAYER_BITS {
             return Err(Error::Timeout("recovery input styles"));
         }
-        // Asynchronous visibility and z-order requests may race; do not report
-        // them as verified recovery. Never activate the target.
-        let _ = position(
-            &self.target,
-            Some(self.original.exstyle & WS_EX_TOPMOST != 0),
-            Some(self.original.visible),
-        );
+        #[cfg(test)]
+        if FAIL_AFTER_INPUT.replace(false) {
+            return Err(Error::Unsupported("injected recovery position failure"));
+        }
+        // Do not issue z-order or visibility requests when already restored.
+        // Pending asynchronous requests can still race this observation.
+        let current_style = exstyle(self.target.window.hwnd)?;
+        let topmost = self.original.exstyle & WS_EX_TOPMOST != 0;
+        let visible = unsafe { IsWindowVisible(self.target.window.hwnd) } != 0;
+        let restore_topmost = ((current_style & WS_EX_TOPMOST != 0) != topmost).then_some(topmost);
+        let restore_visibility =
+            (visible != self.original.visible).then_some(self.original.visible);
+        if restore_topmost.is_some() || restore_visibility.is_some() {
+            position(&self.target, restore_topmost, restore_visibility)?;
+        }
         self.target.ensure()?;
         self.target.remove_own_marker()
     }

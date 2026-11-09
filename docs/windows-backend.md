@@ -150,7 +150,8 @@ the exact process, thread, root window and token again before recovery. It
 restores only the backend-controlled `WS_EX_TRANSPARENT` and `WS_EX_LAYERED`
 bits, preserving other extended styles and layered attributes. A successful
 normal restore removes the claim; a watcher observing that missing claim does
-nothing. A failed critical restore leaves the claim in place and is reported.
+nothing. A failed input-style or attempted visibility/topmost restore leaves
+the claim in place and is reported.
 
 The development session bridge enrolls through a per-session, user-restricted
 named pipe. Both ends check the peer process ID against the retained bridge or
