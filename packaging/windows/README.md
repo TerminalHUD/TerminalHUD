@@ -110,7 +110,9 @@ Reparse points, traversal, duplicate paths, Windows device names, altered packag
 hashes, and unowned install directories are rejected.
 
 `tests/packaging.tests.ps1` uses only a unique temporary directory and a fake
-startup value. Hosted Windows CI runs it under native PowerShell. Native startup
+startup value. Hosted Windows CI runs it under native PowerShell. The native builder CI check retains a seven-day review artifact containing
+real CLI/GUI binaries and an explicitly synthetic, nonlaunchable runtime fixture;
+it is not a distributable product or release. Native startup
 unit tests use fake values; no automated test changes the live Run key. A
 portable policy harness can also run with:
 

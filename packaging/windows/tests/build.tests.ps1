@@ -17,5 +17,10 @@ try {
         if ($bytes.Length -lt 2 -or $bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) { throw "Native Windows binary missing: $name" }
     }
     if (!(Test-Path -LiteralPath (Join-Path $output 'installer\manage.ps1'))) { throw 'Installer missing from staged package' }
+    if ($env:TERMINALHUD_PACKAGE_ARTIFACT) {
+        Assert-SafeTree $env:TERMINALHUD_PACKAGE_ARTIFACT
+        if (Test-Path -LiteralPath $env:TERMINALHUD_PACKAGE_ARTIFACT) { throw 'Review artifact destination already exists' }
+        Copy-Item -LiteralPath $output -Destination $env:TERMINALHUD_PACKAGE_ARTIFACT -Recurse
+    }
     Write-Output 'Native Windows package staged and verified (synthetic runtime, no installation)'
 } finally { if (Test-Path -LiteralPath $temp) { Remove-Item -LiteralPath $temp -Recurse -Force } }

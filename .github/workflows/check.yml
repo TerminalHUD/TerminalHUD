@@ -63,7 +63,17 @@ jobs:
       - name: Stage and verify native Windows package with synthetic runtime
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          TERMINALHUD_PACKAGE_ARTIFACT: ${{ runner.temp }}/terminalhud-review-package
         run: ./packaging/windows/tests/build.tests.ps1
+      - name: Retain review package with synthetic runtime (not a release)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-package-synthetic-runtime-${{ github.run_id }}
+          path: ${{ runner.temp }}/terminalhud-review-package
+          if-no-files-found: error
+          retention-days: 7
       - name: Run native toolchain probe
         run: cargo run --locked -p hudswitch-windows --example toolchain-probe
 
