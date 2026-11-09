@@ -34,16 +34,7 @@ impl Catalog {
         if source.hidden() {
             return Err(Error::Invalid("selected profile is hidden"));
         }
-        if let Some(connection) = source.effective.get("connectionType")
-            && connection
-                .as_str()
-                .and_then(|s| Guid::parse(s).ok())
-                .is_none_or(|g| g.as_str() != "{00000000-0000-0000-0000-000000000000}")
-        {
-            return Err(Error::Invalid(
-                "selected profile requires an unsupported connection",
-            ));
-        }
+        validate_connection(&source.effective)?;
         let fragment = self.preview(selected, hud_guid.clone(), active_opacity)?;
         let owned_profile = fragment.json()["profiles"][0].clone();
         let values = owned_profile
@@ -98,4 +89,35 @@ impl Catalog {
             environment,
         })
     }
+}
+
+impl Catalog {
+    /// An unknown -p GUID may fall back before the bridge can reject its identity.
+    /// Check both native defaults and configured fallback without requiring the
+    /// replacement bridge to execute any ordinary shell command.
+    pub fn validate_fallback(&self) -> Result<(), Error> {
+        validate_connection(&self.defaults)?;
+        if let Ok(default) = self.default() {
+            validate_connection(&default.effective)?;
+        }
+        Ok(())
+    }
+}
+fn validate_connection(values: &serde_json::Map<String, Value>) -> Result<(), Error> {
+    if let Some(elevate) = values.get("elevate") {
+        match elevate.as_bool() {
+            Some(false) => (),
+            Some(true) => return Err(Error::ElevatedProfile),
+            None => return Err(Error::Invalid("invalid elevation setting")),
+        }
+    }
+    if let Some(connection) = values.get("connectionType")
+        && connection
+            .as_str()
+            .and_then(|s| Guid::parse(s).ok())
+            .is_none_or(|g| g.as_str() != "{00000000-0000-0000-0000-000000000000}")
+    {
+        return Err(Error::Invalid("profile requires an unsupported connection"));
+    }
+    Ok(())
 }

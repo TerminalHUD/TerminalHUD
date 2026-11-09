@@ -1,3 +1,5 @@
+mod wsl;
+pub use wsl::{WslLaunch, plan_wsl_launch};
 mod editor;
 pub use editor::{OwnedProfileEntry, ProfilePatch, plan_profile_patch, remove_owned_profile};
 mod inheritance;

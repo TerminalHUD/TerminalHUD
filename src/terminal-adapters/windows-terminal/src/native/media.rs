@@ -5,7 +5,7 @@ use windows_sys::Win32::System::Environment::ExpandEnvironmentStringsW;
 
 /// Read a fragment and retain the meaning of known media properties when moving
 /// its profile to user-settings precedence. Never changes the fragment itself.
-pub fn read_profile_fragment(path: &Path) -> Result<String, NativeError> {
+pub fn read_profile_fragment(path: &Path, namespace: &str) -> Result<String, NativeError> {
     if !path.is_absolute() {
         return Err(NativeError::Invalid("absolute fragment path required"));
     }
@@ -17,6 +17,13 @@ pub fn read_profile_fragment(path: &Path) -> Result<String, NativeError> {
             let object = profile
                 .as_object_mut()
                 .ok_or(NativeError::Invalid("invalid fragment profile"))?;
+            if !object.contains_key("guid")
+                && !object.contains_key("updates")
+                && let Some(name) = object.get("name").and_then(Value::as_str)
+            {
+                let guid = super::providers::fragment_guid(namespace, name)?;
+                object.insert("guid".into(), Value::String(guid.to_string()));
+            }
             resolve(object, path.parent().unwrap())?;
             if let Some(Value::Object(unfocused)) = object.get_mut("unfocusedAppearance") {
                 resolve(unfocused, path.parent().unwrap())?;
@@ -49,7 +56,7 @@ fn media(raw: &str, base: &Path, icon: bool) -> Result<String, NativeError> {
     if raw.is_empty()
         || raw.eq_ignore_ascii_case("none")
         || raw.eq_ignore_ascii_case("desktopWallpaper")
-        || (icon && raw.chars().count() <= 2 && raw.chars().any(|c| !c.is_ascii()))
+        || (icon && raw.chars().count() <= 2 && !raw.is_ascii())
     {
         return Ok(raw.into());
     }
