@@ -43,6 +43,9 @@ fn resolve(values: &mut Map<String, Value>, base: &Path) -> Result<(), NativeErr
             *value = media(value, base, key == "icon")?;
         }
     }
+    if let Some(Value::String(sound)) = values.get_mut("bellSound") {
+        *sound = media(sound, base, false)?;
+    }
     if let Some(Value::Array(sounds)) = values.get_mut("bellSound") {
         for sound in sounds {
             if let Value::String(value) = sound {
@@ -90,13 +93,18 @@ fn media(raw: &str, base: &Path, icon: bool) -> Result<String, NativeError> {
                 "escaped fragment URI media requires resolution",
             ));
         }
-    } else if lower.starts_with("ms-") || lower.starts_with("file:") {
+    } else if lower.starts_with("file:") {
+        value = file_uri_path(&value)?;
+    } else if lower.starts_with("ms-") {
         return Ok(value);
     }
     // A fragment's disallowed UNC resource must not become usable by acquiring
     // user-profile origin. Preserve the rejected/empty resource.
     if value.starts_with("\\\\") || value.starts_with("//") {
         return Ok(String::new());
+    }
+    if value.is_empty() {
+        return Ok(value);
     }
     let (path, index) = if icon {
         value
@@ -117,9 +125,75 @@ fn media(raw: &str, base: &Path, icon: bool) -> Result<String, NativeError> {
     // a later appearance reload can resolve a file created after preparation.
     Ok(format!("{}{index}", resolved.display()))
 }
+// Only local drive file URIs have an unambiguous supported conversion here.
+// Decode before checking UNC so acquiring User origin cannot enable a resource
+// that Terminal rejected at Fragment origin. No filesystem/network reads occur.
+fn file_uri_path(uri: &str) -> Result<String, NativeError> {
+    if !uri.to_ascii_lowercase().starts_with("file:///") {
+        return Err(NativeError::Unsupported("unsupported fragment file URI"));
+    }
+    let bytes = uri.as_bytes();
+    let mut decoded = Vec::new();
+    let mut index = 8;
+    while index < bytes.len() {
+        let byte = if bytes[index] == b'%' {
+            let hex = bytes
+                .get(index + 1..index + 3)
+                .and_then(|h| std::str::from_utf8(h).ok());
+            let value = hex
+                .and_then(|h| u8::from_str_radix(h, 16).ok())
+                .ok_or(NativeError::Invalid("invalid file URI escape"))?;
+            index += 3;
+            value
+        } else {
+            let value = bytes[index];
+            index += 1;
+            value
+        };
+        if byte == 0 {
+            return Err(NativeError::Invalid("NUL in file URI"));
+        }
+        decoded.push(byte);
+    }
+    let path =
+        String::from_utf8(decoded).map_err(|_| NativeError::Invalid("invalid file URI UTF-8"))?;
+    if path.starts_with("\\\\") || path.starts_with("//") {
+        return Ok(String::new());
+    }
+    let bytes = path.as_bytes();
+    if bytes.len() < 3
+        || !bytes[0].is_ascii_alphabetic()
+        || bytes[1] != b':'
+        || !matches!(bytes[2], b'/' | b'\\')
+    {
+        return Err(NativeError::Unsupported(
+            "fragment file URI is not a local drive path",
+        ));
+    }
+    Ok(path)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn file_uri_and_scalar_sound_keep_fragment_restrictions_and_origin() {
+        let base = Path::new(r"C:\fixtures\vendor");
+        assert_eq!(
+            media("file:///%5C%5Cserver%5Cshare%5Cwall.png", base, false).unwrap(),
+            ""
+        );
+        assert_eq!(
+            media("file:///C:/images/my%20wall.png", base, false).unwrap(),
+            "C:/images/my wall.png"
+        );
+        assert!(media("file://server/share/wall.png", base, false).is_err());
+        let mut values = serde_json::json!({"bellSound":"bell.wav"})
+            .as_object()
+            .unwrap()
+            .clone();
+        resolve(&mut values, base).unwrap();
+        assert_eq!(values["bellSound"], r"C:\fixtures\vendor\bell.wav");
+    }
     #[test]
     fn media_keeps_fragment_origin_without_enabling_unc_resources() {
         let base = Path::new(r"C:\fixtures\vendor");

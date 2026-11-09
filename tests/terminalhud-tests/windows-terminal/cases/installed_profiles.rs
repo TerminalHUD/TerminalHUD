@@ -340,6 +340,34 @@ fn optional_null_inherits_but_nullable_color_and_unknown_null_are_retained() {
     .unwrap();
     assert_eq!(result.owned_profile["font"]["size"], 17);
     assert_eq!(result.owned_profile["foreground"], Value::Null);
-    assert_eq!(result.owned_profile["backgroundImage"], "C:\\vendor.png");
+    assert_eq!(result.owned_profile["backgroundImage"], "");
     assert_eq!(result.owned_profile["unknownFuture"], Value::Null);
+}
+
+#[test]
+fn native_null_strings_and_resources_clear_instead_of_inheriting() {
+    let mut profile = source();
+    profile["font"] = json!({"face":null,"size":null,"cellWidth":null});
+    profile["startingDirectory"] = Value::Null;
+    profile["icon"] = Value::Null;
+    profile["colorScheme"] = json!({"dark":null});
+    profile["environment"] = json!({"CLEARED":null});
+    let settings = input(
+        json!({"font":{"face":"Lower","size":17,"cellWidth":"120%"},"startingDirectory":"C:\\lower","icon":"C:\\lower.ico","colorScheme":"Lower"}),
+        profile,
+    );
+    let result = Catalog::parse(&settings)
+        .unwrap()
+        .prepare(None, guid(9), 35)
+        .unwrap();
+    assert_eq!(result.owned_profile["font"]["face"], "");
+    assert_eq!(result.owned_profile["font"]["cellWidth"], "");
+    assert_eq!(result.owned_profile["font"]["size"], 17);
+    assert_eq!(result.owned_profile["icon"], "");
+    assert_eq!(result.starting_directory, Some("".into()));
+    assert_eq!(
+        result.owned_profile["colorScheme"],
+        json!({"dark":"","light":"Lower"})
+    );
+    assert_eq!(result.environment["CLEARED"], "");
 }
