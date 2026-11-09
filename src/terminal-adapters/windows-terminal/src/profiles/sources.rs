@@ -60,12 +60,18 @@ impl Catalog {
         let inbox = inbox.map(document).transpose()?.unwrap_or_default();
         let (defaults, user) = profiles(&root)?;
         let (inbox_defaults, inbox_profiles) = profiles(&inbox)?;
-        let mut defaults = normalize(defaults);
-        let mut inherited_defaults = normalize(inbox_defaults);
-        overlay(&mut inherited_defaults, &defaults);
-        defaults = inherited_defaults;
+        let default_layers = [normalize(defaults), normalize(inbox_defaults)];
+        let mut defaults = default_layers[1].clone();
+        overlay(&mut defaults, &default_layers[0]);
         let mut unresolved_entries = 0;
         let user = entries(&user, &mut unresolved_entries)?;
+        if root.get("disabledProfileSources").is_some_and(|value| {
+            value
+                .as_array()
+                .is_none_or(|values| !values.iter().all(Value::is_string))
+        }) {
+            return Err(Error::Invalid("invalid disabled profile sources"));
+        }
         let disabled = root.get("disabledProfileSources").and_then(Value::as_array);
         let (parents, updates) = collect_parents(
             &inbox_profiles,
@@ -74,7 +80,7 @@ impl Catalog {
             disabled,
             &mut unresolved_entries,
         )?;
-        let resolved = materialize_profiles(&user, &parents, &updates, &defaults)?;
+        let resolved = materialize_profiles(&user, &parents, &updates, &default_layers)?;
         let default_profile = root
             .get("defaultProfile")
             .or_else(|| inbox.get("defaultProfile"))
@@ -90,6 +96,7 @@ impl Catalog {
             profiles: resolved,
             unresolved_entries,
             defaults,
+            default_layers,
         })
     }
 }
@@ -124,6 +131,12 @@ fn collect_parents(
             continue;
         }
         let fragment_root = document(fragment.jsonc)?;
+        if fragment_root
+            .get("profiles")
+            .is_some_and(|value| !value.is_array())
+        {
+            return Err(Error::Invalid("fragment profiles must be an array"));
+        }
         let values = fragment_root
             .get("profiles")
             .and_then(Value::as_array)
@@ -157,7 +170,7 @@ fn materialize_profiles(
     user: &[Entry],
     parents: &[Entry],
     updates: &[Entry],
-    defaults: &Map<String, Value>,
+    defaults: &[Map<String, Value>; 2],
 ) -> Result<Vec<Profile>, Error> {
     let mut ids: Vec<Guid> = user.iter().map(|p| p.guid.clone()).collect();
     for parent in parents {
@@ -171,7 +184,8 @@ fn materialize_profiles(
         let parent = parents.iter().find(|p| p.guid == guid);
         let mut layers = vec![
             user.map(|p| p.values.clone()).unwrap_or_default(),
-            defaults.clone(),
+            defaults[0].clone(),
+            defaults[1].clone(),
         ];
         if let Some(update) = updates.iter().find(|p| p.guid == guid) {
             layers.push(update.values.clone());
