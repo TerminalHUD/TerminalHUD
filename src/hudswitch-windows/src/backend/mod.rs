@@ -24,7 +24,9 @@ mod launch;
 mod marker;
 mod position;
 mod presentation;
+mod recovery;
 mod restore;
+pub use recovery::{RecoveryClaim, RecoveryWatch};
 mod style;
 mod wait;
 
@@ -49,6 +51,10 @@ pub struct LaunchedWindow {
 /// cleanup in the launcher; a rejected receipt has had no style mutations.
 pub trait Launcher {
     fn launch(&mut self, intent: VisibleState) -> Result<LaunchedWindow, Error>;
+    /// Register a recovery watcher before any presentation changes.
+    fn enroll(&mut self, _claim: RecoveryClaim) -> Result<bool, Error> {
+        Ok(false)
+    }
 }
 impl<F: FnMut(VisibleState) -> Result<LaunchedWindow, Error>> Launcher for F {
     fn launch(&mut self, intent: VisibleState) -> Result<LaunchedWindow, Error> {
@@ -68,6 +74,7 @@ pub struct Target {
     changed_style: Cell<u32>,
     changed_topmost: Cell<bool>,
     changed_visibility: Cell<bool>,
+    recovery_enrolled: bool,
 }
 pub struct Original {
     exstyle: u32,

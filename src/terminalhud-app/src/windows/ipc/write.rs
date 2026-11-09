@@ -1,7 +1,11 @@
 use super::{super::native::last, IO_TIMEOUT, operation::Operation};
 use std::io;
 use windows_sys::Win32::{Foundation::*, Storage::FileSystem::*};
-pub(super) fn write(pipe: HANDLE, buffer: &[u8], stop: Option<HANDLE>) -> io::Result<()> {
+pub(in crate::windows) fn write(
+    pipe: HANDLE,
+    buffer: &[u8],
+    stop: Option<HANDLE>,
+) -> io::Result<()> {
     let mut operation = Operation::new()?;
     let mut bytes = 0;
     let count = if unsafe {

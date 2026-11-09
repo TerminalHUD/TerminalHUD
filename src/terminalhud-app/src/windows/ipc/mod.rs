@@ -1,11 +1,11 @@
 //! Authenticated, bounded, local command transport.
-mod accept;
+pub(super) mod accept;
 mod client;
 mod connection;
 mod operation;
-mod read;
+pub(super) mod read;
 mod server;
-mod write;
+pub(super) mod write;
 const IO_TIMEOUT: u32 = 1500;
 const UI_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
 pub use client::{call, call_for_process, call_request, connect, exchange};
