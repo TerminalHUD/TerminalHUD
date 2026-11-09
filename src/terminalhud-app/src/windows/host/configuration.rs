@@ -20,9 +20,15 @@ impl HostContext {
             Err(error) => {
                 eprintln!("TerminalHUD configuration: {error}");
                 if let Some(tray) = self.tray.borrow().as_ref() {
-                    let _ = tray.set_tooltip(Some(
-                        "TerminalHUD — configuration error; inspect configuration",
-                    ));
+                    let detail: String = error
+                        .chars()
+                        .rev()
+                        .take(50)
+                        .collect::<Vec<_>>()
+                        .into_iter()
+                        .rev()
+                        .collect();
+                    let _ = tray.set_tooltip(Some(format!("TerminalHUD configuration: {detail}")));
                 }
                 *self.configuration_error.borrow_mut() = Some(error);
                 false
