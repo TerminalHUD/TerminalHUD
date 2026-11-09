@@ -1,12 +1,13 @@
 use crate::mode::{Mode, REAL_INSTANCE};
 use std::path::PathBuf;
 use terminalhud_core::Command;
-pub const USAGE: &str = "Usage: terminalhud [--development MANIFEST | --prototype [--instance NAME]] run|status|interaction-toggle|visibility-toggle|passive|quit";
+pub const USAGE: &str = "Usage: terminalhud [--development MANIFEST | --prototype [--instance NAME]] run|status|interaction-toggle|visibility-toggle|passive|quit\n       terminalhud config path|validate|open";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
     Help,
     Run,
     Command(Command),
+    Config(super::configuration::ConfigCommand),
 }
 pub struct Arguments {
     pub instance: String,
@@ -22,6 +23,10 @@ pub fn parse(mut args: Vec<String>) -> Result<Arguments, String> {
         action: Action::Help,
     };
     if args.as_slice() == ["--help"] {
+        return Ok(result);
+    }
+    if args.first().is_some_and(|a| a == "config") {
+        result.action = Action::Config(super::configuration::parse(&args[1..])?);
         return Ok(result);
     }
     if args.first().is_some_and(|a| a == "--prototype") {
@@ -42,6 +47,9 @@ pub fn parse(mut args: Vec<String>) -> Result<Arguments, String> {
         }
         result.development = Some(PathBuf::from(args.remove(1)));
         args.remove(0);
+    }
+    if args.first().is_some_and(|a| a == "config") {
+        return Err("config commands do not accept runtime mode or development flags".into());
     }
     if args.len() != 1 {
         return Err("expected exactly one command; see --help".into());
