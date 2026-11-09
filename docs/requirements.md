@@ -104,14 +104,24 @@ must not silently edit shell startup files.
 
 - TerminalHUD launches a dedicated, named Windows Terminal window rather than
   attaching to an arbitrary existing terminal.
-- Unrelated Windows Terminal windows are never modified.
+- Use the user's installed Windows Terminal and its normal global settings. Do
+  not install a duplicate runtime. The HUD owns one window; its owner process
+  may also own ordinary Terminal windows.
+- Unrelated Windows Terminal windows are never modified or terminated.
+- Preserve the selected normal profile's fonts, colors, cursor, padding, images,
+  command, directory, environment and other applicable settings, including
+  unknown future properties. Only the minimum HUD presentation/input behavior
+  may override them.
 - TerminalHUD detects Windows Terminal's configured default profile and uses
   the corresponding HUD variant by default.
 - TerminalHUD generates HUD variants for every discoverable, launchable Windows
   Terminal profile.
 - Normal profiles are not modified.
 - TerminalHUD installs profiles and schemes using Windows Terminal JSON fragment
-  extensions rather than rewriting the user's main `settings.json`.
+  extensions rather than rewriting the user's main `settings.json`. This existing
+  policy cannot represent every profile because user defaults outrank fragments.
+  [The proposed owned-entry amendment](decisions/0011-owned-profile-entries.md)
+  provides a reviewed alternative, but activation requires explicit setup consent.
 
 ## Lifecycle
 
