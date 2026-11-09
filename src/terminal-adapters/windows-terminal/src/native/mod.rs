@@ -1,4 +1,10 @@
 //! Native launch/correlation primitives; no profile installation or style changes.
+mod providers;
+pub use providers::discover_generated_profiles;
+mod media;
+pub use media::read_profile_fragment;
+mod defaults;
+pub use defaults::read_inbox_defaults;
 mod ancestry;
 mod command;
 mod error;
