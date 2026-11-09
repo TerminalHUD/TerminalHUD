@@ -32,3 +32,10 @@ pub(crate) fn ensure_file(path: &Path) -> Result<(), String> {
         Err(error) => Err(file_error(path, "create", error)),
     }
 }
+
+/// Startup creates only a missing file, then validates the resulting contents.
+#[cfg(any(windows, test))]
+pub(crate) fn load_or_create(path: &Path) -> Result<Configuration, String> {
+    ensure_file(path)?;
+    super::validate_file(path)
+}

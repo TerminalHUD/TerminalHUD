@@ -66,7 +66,14 @@ pub(super) fn exchange_with_timeout(
     frame: &[u8],
     timeout: u32,
 ) -> io::Result<Reply> {
-    exchange_to_process(identity, instance, frame, timeout, None)
+    exchange_to_process(
+        identity,
+        instance,
+        frame,
+        timeout,
+        None,
+        Duration::from_secs(2),
+    )
 }
 fn exchange_to_process(
     identity: &Identity,
@@ -74,6 +81,7 @@ fn exchange_to_process(
     frame: &[u8],
     timeout: u32,
     expected_process: Option<u32>,
+    connect_timeout: Duration,
 ) -> io::Result<Reply> {
     if frame.len() > crate::protocol::REQUEST_LEN {
         return Err(io::Error::new(
@@ -81,7 +89,7 @@ fn exchange_to_process(
             "request exceeds fixed frame",
         ));
     }
-    let pipe = connect(identity, instance, Duration::from_secs(2))?;
+    let pipe = connect(identity, instance, connect_timeout)?;
     if let Some(expected) = expected_process {
         let mut actual = 0;
         if unsafe { GetNamedPipeServerProcessId(pipe.raw(), &mut actual) } == 0 {
@@ -111,6 +119,26 @@ fn exchange_to_process(
     write(pipe.raw(), b"THA1", None)?;
     Ok(reply)
 }
+pub fn call_request(instance: &str, request: crate::protocol::Request) -> io::Result<Reply> {
+    let frame = protocol::encode_request(request);
+    if request == crate::protocol::Request::Command(Command::Passive) {
+        let timeout = if instance == crate::mode::REAL_INSTANCE {
+            22_000
+        } else {
+            super::IO_TIMEOUT
+        };
+        return exchange_to_process(
+            &Identity::current()?,
+            instance,
+            &frame,
+            timeout,
+            None,
+            Duration::from_millis(100),
+        );
+    }
+    exchange(&Identity::current()?, instance, &frame)
+}
+
 pub fn call(instance: &str, command: Command) -> io::Result<Reply> {
     exchange(
         &Identity::current()?,
@@ -137,5 +165,6 @@ pub fn call_for_process(
         &protocol::encode_request(command),
         timeout,
         Some(expected_process),
+        Duration::from_secs(2),
     )
 }

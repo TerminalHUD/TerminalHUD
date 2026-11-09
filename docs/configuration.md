@@ -8,8 +8,8 @@ The initial Windows implementation stores per-user configuration at:
 
 Schema version 1 is implemented by the portable app JSON codec. The complete
 example below represents the built-in defaults. Local configuration commands
-can read and open settings. Applying preferences, registering shortcuts and
-reloading the runtime remain future work.
+can read and open settings. The reload command contacts the running host;
+applying preferences awaits production launcher integration.
 
 ```json
 {
@@ -63,8 +63,8 @@ Shortcut grammar is case-sensitive: one or more distinct modifiers from `Win`,
 modifier-only chords and repeated modifiers are rejected. Modifier order does
 not matter; serialization orders them Win, Ctrl, Alt, Shift. The two chords must
 be distinct after normalization. This supported symbolic subset makes no claim
-about native layout mapping, OS availability or registration; it does not change
-the currently registered Windows defaults.
+about native layout mapping, OS availability or registration. The development
+host continues to use the fixed Windows defaults.
 
 Profile selection is the reserved string `auto`, or an opaque ID of 1 through
 256 UTF-8 bytes with at least one non-whitespace character and no control
@@ -90,15 +90,22 @@ preserves the current valid value. These APIs do not write or replace a file.
 
 ## Configuration commands
 
-These commands are implemented on native Windows and do not start or contact
-the tray owner. Do not combine them with `--prototype`, `--instance` or
-`--development` runtime flags.
+These commands are implemented on native Windows. `path`, `validate`, and
+`open` do not start or contact the tray owner; `reload` contacts the running
+real owner without starting it. Do not combine them with `--prototype`,
+`--instance` or `--development` runtime flags.
 
 ```text
 terminalhud config path
 terminalhud config validate
 terminalhud config open
+terminalhud config reload
 ```
+
+`reload` sends a request to the running real host and reports failure if it cannot
+apply the settings. The isolated development host does not consume user settings
+and rejects reload. Production launch and startup registration are still being
+integrated; reload does not yet apply settings in the current development build.
 
 `path` prints the settings filename, resolved from the current user's Windows
 Local App Data known folder (including folder redirection). Resolution uses no

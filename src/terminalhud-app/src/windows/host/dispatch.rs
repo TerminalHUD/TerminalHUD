@@ -34,6 +34,9 @@ impl HostContext {
                     PostQuitMessage(0);
                 },
                 UiMessage::Request { command, reply } => self.command(command, reply),
+                UiMessage::ReloadConfiguration { reply } => self.reload_configuration(reply),
+                UiMessage::OpenConfiguration => self.open_configuration(),
+                UiMessage::ValidateConfiguration => self.validate_configuration(),
             }
         }
         self.busy.set(false);
