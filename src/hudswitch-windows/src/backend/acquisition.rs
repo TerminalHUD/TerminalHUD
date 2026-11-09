@@ -46,6 +46,18 @@ impl<L: Launcher> WindowsBackend<L> {
         if unsafe { SetPropW(window.hwnd, self.atom.key(), token as HANDLE) } == 0 {
             return Err(last_error("SetPropW (check privilege compatibility)"));
         }
+        let claim = RecoveryClaim::new(&window, token, &original);
+        let recovery_enrolled = match self.launcher.enroll(claim) {
+            Ok(value) => value,
+            Err(error) => {
+                if unsafe { GetPropW(window.hwnd, self.atom.key()) } as usize == token {
+                    unsafe {
+                        RemovePropW(window.hwnd, self.atom.key());
+                    }
+                }
+                return Err(error);
+            }
+        };
         let target = Target {
             window,
             atom: self.atom.clone(),
@@ -55,6 +67,7 @@ impl<L: Launcher> WindowsBackend<L> {
             changed_style: Cell::new(0),
             changed_topmost: Cell::new(false),
             changed_visibility: Cell::new(false),
+            recovery_enrolled,
         };
         target.ensure()?;
         Ok(Acquired { target, original })

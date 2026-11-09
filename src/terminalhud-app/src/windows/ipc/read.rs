@@ -1,7 +1,11 @@
 use super::{super::native::last, IO_TIMEOUT, operation::Operation};
 use std::io;
 use windows_sys::Win32::{Foundation::*, Storage::FileSystem::*};
-pub(super) fn read(pipe: HANDLE, buffer: &mut [u8], stop: Option<HANDLE>) -> io::Result<usize> {
+pub(in crate::windows) fn read(
+    pipe: HANDLE,
+    buffer: &mut [u8],
+    stop: Option<HANDLE>,
+) -> io::Result<usize> {
     read_with_timeout(pipe, buffer, stop, IO_TIMEOUT)
 }
 pub(super) fn read_with_timeout(

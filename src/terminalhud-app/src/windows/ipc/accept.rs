@@ -4,7 +4,7 @@ use windows_sys::Win32::{
     Foundation::*,
     System::{Pipes::*, Threading::INFINITE},
 };
-pub(super) fn accept(pipe: HANDLE, stop: HANDLE) -> io::Result<()> {
+pub(in crate::windows) fn accept(pipe: HANDLE, stop: HANDLE) -> io::Result<()> {
     let mut operation = Operation::new()?;
     if unsafe { ConnectNamedPipe(pipe, &mut operation.overlapped) } != 0 {
         return Ok(());

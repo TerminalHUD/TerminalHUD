@@ -14,7 +14,7 @@ pub(in crate::windows) struct DevelopmentLauncher {
     config: Configuration,
     // Retain live bridge and launch process identities until next acquisition;
     // dropping either handle deliberately leaves the terminal session running.
-    session: Option<(native::LauncherProcess, OwnedHandle)>,
+    session: Option<(native::LauncherProcess, OwnedHandle, String)>,
 }
 impl DevelopmentLauncher {
     pub(in crate::windows) fn new(config: Configuration) -> Self {
@@ -105,12 +105,20 @@ impl DevelopmentLauncher {
         // session proof satisfy the backend's delegated-launch receipt contract.
         let receipt =
             unsafe { LaunchedWindow::from_verified_launch(hwnd as _, owner) }.map_err(error)?;
-        self.session = Some((launcher, bridge));
+        self.session = Some((launcher, bridge, identity.nonce.bare().replace('-', "")));
         Ok(receipt)
     }
 }
 impl Launcher for DevelopmentLauncher {
     fn launch(&mut self, intent: VisibleState) -> Result<LaunchedWindow, Error> {
         self.acquire(intent).map_err(Error::Launch)
+    }
+    fn enroll(&mut self, claim: hudswitch_windows::RecoveryClaim) -> Result<bool, Error> {
+        let (_, bridge, instance) = self
+            .session
+            .as_ref()
+            .ok_or(Error::Unsupported("missing recovery bridge"))?;
+        super::super::recovery::enroll(instance, bridge, claim).map_err(Error::Launch)?;
+        Ok(true)
     }
 }
