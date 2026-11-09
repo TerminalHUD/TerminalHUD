@@ -67,7 +67,7 @@ try {
     $junction = Join-Path $temp 'junction'
     $null = New-Item -ItemType Junction -Path $junction -Target $package
     Reject { Resolve-PayloadPath $temp 'junction/terminalhud.exe' }
-    Remove-Item -LiteralPath $junction
+    [IO.Directory]::Delete($junction)
     $manifest.build_id = 'fixture3'; Write-Manifest
     Reject { Invoke-Install $package $root { param($path, $target) throw 'Injected shortcut failure' } }
     Assert (Test-Path -LiteralPath (Join-Path $root 'versions\fixture3\terminalhud.exe')) 'Partial installation ownership lost'
