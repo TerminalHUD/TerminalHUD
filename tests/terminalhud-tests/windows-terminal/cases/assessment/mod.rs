@@ -2,10 +2,14 @@ use serde_json::{Value, json};
 use terminalhud_windows_terminal::*;
 #[path = "evidence.rs"]
 mod evidence;
-#[path = "inheritance.rs"]
-mod inheritance;
-#[path = "refusals.rs"]
-mod refusals;
+#[path = "precedence.rs"]
+mod precedence;
+#[path = "sources.rs"]
+mod sources;
+#[path = "unfocused.rs"]
+mod unfocused;
+#[path = "validation.rs"]
+mod validation;
 
 const HUD: &str = include_str!("../../fixtures/assessment/hud.jsonc");
 const DEFAULTS: &str = include_str!("../../fixtures/assessment/unsafe-defaults.jsonc");
