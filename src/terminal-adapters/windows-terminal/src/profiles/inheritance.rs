@@ -45,7 +45,76 @@ pub(super) fn normalize(mut values: Map<String, Value>) -> Map<String, Value> {
         }
         values.remove(old);
     }
+    // Most native properties are std::optional<T>: JSON null unsets the layer,
+    // allowing inheritance. Nullable color settings deliberately retain null.
+    values.retain(|key, value| !value.is_null() || !optional_property(key));
+    if let Some(Value::Object(font)) = values.get_mut("font") {
+        font.retain(|key, value| {
+            !value.is_null()
+                || !matches!(
+                    key.as_str(),
+                    "face"
+                        | "size"
+                        | "weight"
+                        | "axes"
+                        | "features"
+                        | "builtinGlyphs"
+                        | "colorGlyphs"
+                        | "cellWidth"
+                        | "cellHeight"
+                )
+        });
+    }
+    if let Some(Value::Object(schemes)) = values.get_mut("colorScheme") {
+        schemes.retain(|key, value| !value.is_null() || !matches!(key.as_str(), "dark" | "light"));
+    }
     values
+}
+fn optional_property(key: &str) -> bool {
+    matches!(
+        key,
+        "name"
+            | "source"
+            | "hidden"
+            | "font"
+            | "colorScheme"
+            | "opacity"
+            | "cursorShape"
+            | "cursorHeight"
+            | "backgroundImageOpacity"
+            | "backgroundImageStretchMode"
+            | "backgroundImageAlignment"
+            | "backgroundImage"
+            | "intenseTextStyle"
+            | "adjustIndistinguishableColors"
+            | "useAcrylic"
+            | "experimental.retroTerminalEffect"
+            | "experimental.pixelShaderPath"
+            | "experimental.pixelShaderImagePath"
+            | "historySize"
+            | "snapOnInput"
+            | "altGrAliasing"
+            | "commandline"
+            | "scrollbarState"
+            | "antialiasingMode"
+            | "startingDirectory"
+            | "icon"
+            | "suppressApplicationTitle"
+            | "connectionType"
+            | "closeOnExit"
+            | "tabTitle"
+            | "bellStyle"
+            | "environment"
+            | "rightClickContextMenu"
+            | "bellSound"
+            | "elevate"
+            | "autoMarkPrompts"
+            | "showMarksOnScrollbar"
+            | "experimental.repositionCursorWithMouse"
+            | "compatibility.reloadEnvironmentVariables"
+            | "pathTranslationStyle"
+            | "padding"
+    )
 }
 
 pub(super) fn overlay(base: &mut Map<String, Value>, layer: &Map<String, Value>) {
@@ -79,6 +148,9 @@ pub(super) fn effective(layers: &[Map<String, Value>]) -> Map<String, Value> {
         // The user profile inherits all parents. Other parent layers are independent.
         let owners = if index == 0 {
             &layers[index..]
+        } else if index == 1 {
+            // User defaults inherit inbox defaults; keep that owner chain intact.
+            &layers[index..index + 2]
         } else {
             &layers[index..index + 1]
         };

@@ -42,7 +42,8 @@ impl Catalog {
             .expect("preview profile is an object");
         let loaded_fragment = super::inheritance::effective(&[
             Default::default(),
-            self.defaults.clone(),
+            self.default_layers[0].clone(),
+            self.default_layers[1].clone(),
             values.clone(),
         ]);
         let fragment_compatible = values

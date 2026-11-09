@@ -70,6 +70,9 @@ pub(super) fn profiles(
     for key in ["guid", "name", "source", "commandline"] {
         defaults.remove(key);
     }
+    if container.get("list").is_some_and(|value| !value.is_array()) {
+        return Err(Error::Invalid("profile list must be an array"));
+    }
     let list = container
         .as_array()
         .or_else(|| container.get("list").and_then(Value::as_array));

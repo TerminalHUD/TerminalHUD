@@ -302,3 +302,44 @@ fn wsl_directory_promotion_matches_native_terminal_without_replacing_arguments()
     assert!(plan_wsl_launch("wsl -d Ubuntu", "", system).is_none());
     assert!(plan_wsl_launch("wsl ~/run.sh", "/home", system).is_some());
 }
+
+#[test]
+fn inbox_unfocused_owner_is_not_reparented_to_user_defaults() {
+    let settings = input(json!({"foreground":"#ff0000"}), source());
+    let inbox = json!({"profiles":{"defaults":{"foreground":"#00ff00","unfocusedAppearance":{}},"list":[]}}).to_string();
+    let result = Catalog::from_sources(&settings, Some(&inbox), &[], &[])
+        .unwrap()
+        .prepare(None, guid(9), 35)
+        .unwrap();
+    assert_eq!(result.owned_profile["foreground"], "#ff0000");
+    assert_eq!(
+        result.owned_profile["unfocusedAppearance"]["foreground"],
+        "#00ff00"
+    );
+}
+#[test]
+fn optional_null_inherits_but_nullable_color_and_unknown_null_are_retained() {
+    let settings = input(
+        json!({}),
+        json!({"guid":guid(1).as_str(),"name":"User","source":"vendor","font":{"size":null},
+        "foreground":null,"backgroundImage":null,"unknownFuture":null}),
+    );
+    let fragment = json!({"profiles":[{"guid":guid(1).as_str(),"name":"Vendor","commandline":"vendor.exe",
+        "font":{"size":17},"foreground":"#123456","backgroundImage":"C:\\vendor.png","unknownFuture":{"value":1}}]}).to_string();
+    let result = Catalog::from_sources(
+        &settings,
+        None,
+        &[ProfileFragment {
+            namespace: "vendor",
+            jsonc: &fragment,
+        }],
+        &[],
+    )
+    .unwrap()
+    .prepare(None, guid(9), 35)
+    .unwrap();
+    assert_eq!(result.owned_profile["font"]["size"], 17);
+    assert_eq!(result.owned_profile["foreground"], Value::Null);
+    assert_eq!(result.owned_profile["backgroundImage"], "C:\\vendor.png");
+    assert_eq!(result.owned_profile["unknownFuture"], Value::Null);
+}

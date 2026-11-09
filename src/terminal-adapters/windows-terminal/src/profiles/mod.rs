@@ -43,4 +43,5 @@ pub struct Catalog {
     /// Entries without supplied identity are left unresolved, not invented.
     pub unresolved_entries: usize,
     defaults: Map<String, Value>,
+    default_layers: [Map<String, Value>; 2],
 }
