@@ -5,7 +5,7 @@ fn modes_are_explicit_and_cannot_route_prototype_to_real_owner() {
     let real = parse(vec!["status".into()]).unwrap();
     assert_eq!(real.mode, Mode::Real);
     assert_eq!(real.instance, REAL_INSTANCE);
-    assert!(parse(vec!["run".into()]).is_err());
+    assert_eq!(parse(vec!["run".into()]).unwrap().action, Action::Run);
     assert!(
         parse(vec![
             "--prototype".into(),

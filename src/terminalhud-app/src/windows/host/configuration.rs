@@ -27,7 +27,9 @@ impl HostContext {
         let startup_change = startup
             .prepare(candidate.start_with_windows())
             .map_err(|error| format!("startup registration preparation failed: {error}"))?;
-        let prepared_launch = launch.prepare(&candidate)?;
+        let target_present = self.controller.borrow().status().availability
+            == terminalhud_core::integration::Availability::Managed;
+        let prepared_launch = launch.prepare(&candidate, target_present)?;
         let mut hotkeys = self.hotkeys.borrow_mut();
         let hotkeys = hotkeys.as_mut().ok_or("hotkey service unavailable")?;
         let bootstrap = self.requires_configuration && !self.launch_ready.get();

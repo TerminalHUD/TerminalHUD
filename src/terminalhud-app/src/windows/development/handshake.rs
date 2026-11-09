@@ -6,7 +6,7 @@ use std::{
 };
 use terminalhud_windows_terminal::{Guid, LaunchIdentity, SessionProof};
 use windows_sys::Win32::System::Threading::*;
-pub(super) fn read(
+pub(in crate::windows) fn read(
     path: &Path,
     identity: &LaunchIdentity,
 ) -> io::Result<(SessionProof, OwnedHandle)> {

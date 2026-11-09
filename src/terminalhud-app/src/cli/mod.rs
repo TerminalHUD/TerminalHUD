@@ -17,6 +17,14 @@ fn run_with_config(
     local: impl FnOnce(ConfigCommand) -> Result<String, String>,
 ) -> Result<String, String> {
     #[cfg(windows)]
+    if args
+        .first()
+        .is_some_and(|arg| arg == "--installed-session-bridge")
+    {
+        crate::windows::installed::run_bridge(&args[1..])?;
+        return Ok(String::new());
+    }
+    #[cfg(windows)]
     if args.first().is_some_and(|arg| arg == "--session-bridge") {
         crate::windows::development::run_bridge(&args[1..])?;
         return Ok(String::new());
@@ -24,6 +32,16 @@ fn run_with_config(
     let args = parse(args)?;
     if args.action == Action::Help {
         return Ok(USAGE.into());
+    }
+    if matches!(args.action, Action::ProfilePlan | Action::ProfileApply) {
+        #[cfg(windows)]
+        {
+            return crate::windows::installed::profile_command(args.action == Action::ProfileApply);
+        }
+        #[cfg(not(windows))]
+        {
+            return Err("installed profiles require native Windows".into());
+        }
     }
     if let Action::Config(command) = args.action {
         return local(command);
@@ -66,7 +84,9 @@ fn runtime_reply(
         Action::Run => start(args),
         Action::ReloadConfiguration => send(&args.instance, Request::ReloadConfiguration),
         Action::Command(command) => send(&args.instance, Request::Command(command)),
-        Action::Help | Action::Config(_) => unreachable!(),
+        Action::Help | Action::Config(_) | Action::ProfilePlan | Action::ProfileApply => {
+            unreachable!()
+        }
     }
 }
 

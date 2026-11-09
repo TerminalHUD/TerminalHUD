@@ -96,9 +96,9 @@ pub(super) fn tray_for_mode(
         .with_tooltip(if mode == crate::mode::Mode::Prototype {
             "TerminalHUD prototype — no terminal attached"
         } else if hotkey_error != 0 {
-            "TerminalHUD development — hotkeys unavailable; use tray or CLI status"
+            "TerminalHUD — hotkeys unavailable; use tray or CLI status"
         } else {
-            "TerminalHUD development"
+            "TerminalHUD"
         })
         .with_icon(icon)
         .build()

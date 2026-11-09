@@ -1,10 +1,10 @@
 //! Explicit portable development composition; never discovers ordinary targets.
 mod bridge;
 mod config;
-mod handshake;
+pub(in crate::windows) mod handshake;
 mod launcher;
 mod namespaces;
-mod nonce;
+pub(in crate::windows) mod nonce;
 mod runtime_profiles;
 mod temporary;
 pub use bridge::run_bridge;

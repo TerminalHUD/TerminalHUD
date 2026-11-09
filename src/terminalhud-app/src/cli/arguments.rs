@@ -1,7 +1,8 @@
 use crate::mode::{Mode, REAL_INSTANCE};
 use std::path::PathBuf;
 use terminalhud_core::Command;
-pub const USAGE: &str = "Usage: terminalhud [--development MANIFEST | --prototype [--instance NAME]] run|status|interaction-toggle|visibility-toggle|passive|quit\n       terminalhud config path|validate|open|reload";
+pub const USAGE: &str = "Usage: terminalhud [--development MANIFEST | --prototype [--instance NAME]] run|status|interaction-toggle|visibility-toggle|passive|quit\n       terminalhud config path|validate|open|reload
+       terminalhud profiles plan|apply";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
     Help,
@@ -9,6 +10,8 @@ pub enum Action {
     Command(Command),
     Config(super::configuration::ConfigCommand),
     ReloadConfiguration,
+    ProfilePlan,
+    ProfileApply,
 }
 pub struct Arguments {
     pub instance: String,
@@ -24,6 +27,14 @@ pub fn parse(mut args: Vec<String>) -> Result<Arguments, String> {
         action: Action::Help,
     };
     if args.as_slice() == ["--help"] {
+        return Ok(result);
+    }
+    if args.first().is_some_and(|a| a == "profiles") {
+        result.action = match args.as_slice() {
+            [_, operation] if operation == "plan" => Action::ProfilePlan,
+            [_, operation] if operation == "apply" => Action::ProfileApply,
+            _ => return Err("expected profiles plan or profiles apply".into()),
+        };
         return Ok(result);
     }
     if args.first().is_some_and(|a| a == "config") {
@@ -68,9 +79,6 @@ pub fn parse(mut args: Vec<String>) -> Result<Arguments, String> {
         "quit" => Action::Command(Command::Quit),
         _ => return Err("unknown command".into()),
     };
-    if result.action == Action::Run && result.mode == Mode::Real && result.development.is_none() {
-        return Err("real development run requires --development MANIFEST; installed profile recognition is not implemented".into());
-    }
     if result.development.is_some() && result.action != Action::Run {
         return Err("--development is only used with run".into());
     }

@@ -1,6 +1,7 @@
 //! Platform application composition; portable cores contain no Windows types.
 pub mod development;
 pub mod host;
+pub(crate) mod installed;
 pub mod ipc;
 mod native;
 pub mod process_output;

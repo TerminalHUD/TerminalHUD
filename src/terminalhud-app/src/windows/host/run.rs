@@ -37,11 +37,12 @@ pub fn run_host(options: HostOptions) -> io::Result<()> {
     let (sender, queue) = mpsc::sync_channel(64);
     let controller = RuntimeController::new(&options)?;
     let production = options.mode == Mode::Real && options.development.is_none();
+    let launch_preferences = controller.launch_preferences();
     let context = Box::new(HostContext::new(
         queue,
         controller,
         options.mode,
-        None,
+        launch_preferences,
         production,
     ));
     let window = HostWindow::create(&context)?;
