@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod config;
+
 use hudswitch_core::{Backend, Controller, Event, Status, TransitionError, VisibleState};
 
 /// Platform composition imports these contracts without reversing crate edges.
