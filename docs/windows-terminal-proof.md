@@ -54,14 +54,17 @@ a fresh preview without installing it, and the internal nonce shell fixture.
 The probe uses normal `start_with_command` Active creation. It verifies fresh
 HWND/executable/retained ancestry and nonce/profile/session before constructing
 a delegated backend receipt. The controller captures the owned blue sink's
-foreground before launch. One ordinary identity-checked sink foreground request
+foreground before launch. The opaque blue sink is an ordinary non-topmost window,
+so restoring its focus does not place it above a topmost target. One ordinary
+identity-checked sink foreground request
 is allowed during setup; failure is a prelaunch refusal, without focus bypasses.
 
 The sequence checks primary fullscreen bounds, Active focus/topmost, Passive
 focus restoration/click-through, Hidden memory and same-session survival. Exactly
 one physical mouse click is permitted only after hit-testing/PID verification
-identifies the owned Passive sink. All mouse buttons must be released; a partial
-insertion that leaves this probe's LEFTDOWN unmatched receives exactly one
+identifies the owned Passive sink and relative-order checks prove that the HUD
+is above it. Those order checks also run after the click. All mouse buttons must
+be released; a partial insertion that leaves this probe's LEFTDOWN unmatched receives exactly one
 compensating LEFTUP, with cleanup failure reported. There is no automatic cursor
 restoration: the proof click can leave the pointer at its click location, avoiding
 overriding a user's later movement or drag. Separate preflight/injection calls
@@ -133,8 +136,10 @@ created. Primary references: [BitBlt](https://learn.microsoft.com/en-us/windows/
 and [GdiFlush](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-gdiflush).
 
 Retained target/sink/session, fullscreen geometry and required foreground are
-validated before and after capture. Sample-point ownership uses bounded cheap
-window-root comparisons, with no process/file query or screen `GetPixel` per
+validated before and after capture. Checked topmost bands and a bounded native
+Z-order walk additionally prove that the owned background is behind the target;
+these checks never reposition either window. Sample-point ownership uses bounded
+cheap window-root comparisons, with no process/file query or screen `GetPixel` per
 pixel. These separate checks do not make capture atomic against concurrent
 window changes. Pure processing uses exactly the previous screen coordinates,
 step8, background expectation, white threshold/count and brightest-pixel rule.
@@ -148,7 +153,7 @@ The first completed nonmatching sample is logged immediately. A later failed or
 censored read retains the last completed sample and the exact read error, with
 sample-budget exhaustion reported separately; prior pixels cannot establish the
 later read's ownership or paint. No completed sample means no retained pixel claim.
-The reviewed run4 measured millisecond captures and passed Active rendering;
-Passive exhausted its sample budget after completed nonmatching samples. See the
-[measured limitations](windows-terminal-feasibility.md#bounded-capture-measurement-and-retained-diagnostic-gap).
-Full Passive/Hidden/input/session/Quit acceptance remains incomplete.
+The corrected full normal proof passed Active/Passive rendering, guarded click
+routing, Hidden/session memory and normal Quit restoration; see the
+[measured outcome and limits](windows-terminal-feasibility.md). Earlier blue-only
+captures lacked relative-order proof and do not establish a renderer failure.

@@ -9,8 +9,8 @@ synthetic settings, verifying exact HWND/process ancestry, executable, profile,
 and session before control. Mutations and pixel sampling were restricted to
 owned fixtures; unrelated Terminal windows were inspected read-only as witnesses.
 Runs ended with zero owned processes; user settings and global fragments remained
-unchanged. No physical input, user settings changes, or unsupported launch
-bypass was used.
+unchanged. The corrected full proof used one guarded physical click and no
+keyboard input, user settings changes, or unsupported launch bypass.
 
 **Confirmed findings.** Fresh HUDs start Active per [ADR 0009](decisions/0009-active-hud-creation.md);
 Passive and Hidden remain transitions. Bindings are unchanged. The portable
@@ -18,28 +18,29 @@ target activated with both `SW_SHOWNOACTIVATE` and `SW_SHOWNA`; fullscreen was
 not required to reproduce activation. The cause is unknown. An earlier setup
 timeout was inconclusive.
 
-The exact-owned normal Active run passed launch/session ownership, fullscreen
-bounds, topmost, focus, 35% background, and opaque-white text (1,562 qualifying
-samples). Native Passive state and exact saved-foreground checks passed despite
-a retained `FocusRefused` warning. Passive background reached 0%; completed
-captures had zero white samples. A visual observation reported white appearing
-briefly then disappearing. However, the opaque blue test background was itself
-topmost, and the proof never established that it remained behind the HUD after
-foreground restoration. Those observations cannot distinguish occlusion from
-renderer loss. Separate no-input diagnostics with a verified background behind
-the target preserved 0% background and opaque text both with and without alpha
-initialization, including a control adding initial Active presentation. These
-diagnostics do not establish full controller acceptance or an alpha-related cause.
+The corrected full normal proof at
+[`dd23d93`](https://github.com/TerminalHUD/TerminalHUD/commit/dd23d93f7dc445f814ac40efd1afa8fee9ff6dd0)
+exited 0. Exact-owned launch/session, primary fullscreen, topmost and Active
+focus passed. Active 35% background measured RGB (26,104,143); Passive 0%
+measured (40,160,220), each with 1,562 opaque-white samples. One guarded physical
+click reached the owned sink. Passive/Hidden/Passive and Active/Hidden/Active
+preserved the exact session. Normal Quit restored owned styles/visibility and
+left that session alive before explicit nonce cleanup. A Passive `FocusRefused`
+API warning remained recorded while strict saved-foreground/native checks passed;
+the actual release branch was not logged.
 
-**Acceptance boundary.** The proof now uses an ordinary non-topmost background
-and checks actual target-above-background order around capture and click routing,
-without repositioning the HUD to force a pass. The corrected full proof has not
-yet run. Physical click routing, remaining Hidden/session loops, and the normal
-successful-Quit/session-preservation phase remain unverified.
-A direct focus warning alone does not prove whether a particular run took the
-hide/show branch. Product alpha initialization and the full proof's saved-focus,
-ownership and neutral-input guards are unchanged. Complete profile cloning is
-also unverified.
+**Historical ambiguity.** Earlier zero-white captures and a visual report of
+white briefly appearing then disappearing used an opaque topmost blue background
+without relative-order proof. They cannot distinguish occlusion from renderer
+loss. The corrected proof uses an ordinary non-topmost background and checks
+actual target-above-background order around capture and click routing, without
+repositioning the HUD to force a pass. This does not prove the sole historical
+cause. Product/backend alpha initialization is unchanged.
+
+**Remaining limits.** Results cover this dedicated portable version and synthetic
+profile. Installed fragment reload, Preview and complete ordinary-profile cloning
+remain unverified. This adapter proof does not establish the real application
+shell/tray/IPC/selected-shortcut composition tracked in TER-11.
 
 **Reproduction and raw records.** See the [Windows Terminal proof guide](windows-terminal-proof.md)
 and [TER-9/TER-14 draft PR #9](https://github.com/TerminalHUD/TerminalHUD/pull/9).
