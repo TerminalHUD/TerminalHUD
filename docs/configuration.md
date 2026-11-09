@@ -8,8 +8,8 @@ The initial Windows implementation stores per-user configuration at:
 
 Schema version 1 is implemented by the portable app JSON codec. The complete
 example below represents the built-in defaults. Local configuration commands
-can read and open settings. Applying preferences, registering shortcuts and
-reloading the runtime remain future work.
+can read and open settings. The reload command contacts the running host;
+applying preferences awaits production launcher integration.
 
 ```json
 {
@@ -63,8 +63,8 @@ Shortcut grammar is case-sensitive: one or more distinct modifiers from `Win`,
 modifier-only chords and repeated modifiers are rejected. Modifier order does
 not matter; serialization orders them Win, Ctrl, Alt, Shift. The two chords must
 be distinct after normalization. This supported symbolic subset makes no claim
-about native layout mapping, OS availability or registration; it does not change
-the currently registered Windows defaults.
+about native layout mapping, OS availability or registration. The development
+host continues to use the fixed Windows defaults.
 
 Profile selection is the reserved string `auto`, or an opaque ID of 1 through
 256 UTF-8 bytes with at least one non-whitespace character and no control
