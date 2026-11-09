@@ -28,6 +28,11 @@ try {
     $null = Invoke-OperationLock $root { Invoke-Install $package $root $create }
     Reject { Invoke-Install $package $root $create }
     Assert ((Get-FileDigest $settings) -ceq $settingsBefore) 'Settings changed'
+    $receiptBefore = [IO.File]::ReadAllBytes((Join-Path $root 'receipt.json'))
+    $oversized = Read-Receipt $root
+    $oversized.startup_commands = @('x' * 1MB)
+    Reject { Save-Receipt $root $oversized }
+    Assert ([Convert]::ToBase64String($receiptBefore) -ceq [Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $root 'receipt.json')))) 'Oversized receipt replaced existing ownership'
     $oldCli = Join-Path $root 'versions\fixture1\terminalhud.exe'
     $manifest.build_id = 'fixture2'; Write-Manifest
     $shortcutBytes = [IO.File]::ReadAllBytes($script:fixtureShortcut)

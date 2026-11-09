@@ -32,12 +32,17 @@ function Read-Receipt([string] $Root) {
     }
     return $receipt
 }
+function ConvertTo-ReceiptJson($Receipt) {
+    $json = $Receipt | ConvertTo-Json -Depth 10
+    if ([Text.Encoding]::UTF8.GetByteCount($json) -gt 1MB) { throw 'Installation receipt would exceed 1 MiB; existing ownership preserved' }
+    return $json
+}
 function Save-Receipt([string] $Root, $Receipt) {
     Assert-SafeTree $Root
     $path = Join-Path $Root 'receipt.json'
     Assert-SafeTree $path
     $temporary = Join-Path $Root ([Guid]::NewGuid().ToString('N') + '.tmp')
-    $json = $Receipt | ConvertTo-Json -Depth 10
+    $json = ConvertTo-ReceiptJson $Receipt
     try {
         [IO.File]::WriteAllText($temporary, $json, (New-Object Text.UTF8Encoding($false)))
         if (Test-Path -LiteralPath $path) { [IO.File]::Replace($temporary, $path, [NullString]::Value) }

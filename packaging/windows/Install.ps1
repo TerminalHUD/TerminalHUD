@@ -13,11 +13,13 @@ function New-InstallPlan([string] $Package, [string] $Root) {
     $versions = @(); $commands = @(); $shortcuts = @()
     if ($null -ne $receipt) { $versions = @($receipt.versions); $commands = @($receipt.startup_commands); $shortcuts = @($receipt.shortcuts) }
     $command = '"' + (Join-Path $versionPath 'terminalhud-shell.exe') + '"'
-    return [pscustomobject]@{
+    $plan = [pscustomobject]@{
         operation = 'install'; root = $Root; package = $Package; build_id = $manifest.build_id
         startup_command = $command; shortcut = Get-ShortcutPath; files = $files
         receipt = [pscustomobject]@{ schema_version = 1; product = 'TerminalHUD'; installed = $true; active_build = $manifest.build_id; shortcuts = @($shortcuts); versions = @($versions) + @($version); startup_commands = @($commands) + @($command) }
     }
+    $null = ConvertTo-ReceiptJson $plan.receipt
+    return $plan
 }
 function Invoke-Install([string] $Package, [string] $Root, [scriptblock] $CreateShortcut) {
     # Plan again at application time: stale plans are never accepted as authority.
