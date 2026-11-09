@@ -104,3 +104,16 @@ and serialized host events.
 These are portable contract tests. They do not establish actual Win32 focus,
 click-through, window acquisition, or terminal behavior. Those require the
 backend test window and native desktop evidence in subsequent tasks.
+
+## Explicit lifecycle observation
+
+`Controller::refresh` runs on the same authoritative owner as `dispatch`. It
+validates and observes an existing target without acquiring an absent one. Healthy
+observations preserve saved focus and Hidden return state without presentation
+mutations; closure becomes Absent. Active focus loss uses the existing FocusLost
+transition and preserves the user's new foreground. Validation failures invalidate
+confirmation without mutating an unknown target. Observation failures or other
+invariant mismatches report errors and attempt existing safe recovery, retaining
+original restoration ownership if recovery remains unconfirmed. `status(&self)`
+is still a pure cached accessor; hosts explicitly refresh on lifecycle polling
+and before displaying real status.

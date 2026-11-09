@@ -22,6 +22,7 @@ pub(super) fn handle_connection(
     stop: &Handle,
     identity: &Identity,
     ui: &UiSender,
+    mode: crate::mode::Mode,
 ) -> io::Result<bool> {
     accept(pipe.raw(), stop.raw())?;
     security::verify_peer(pipe, false, identity)?;
@@ -36,7 +37,12 @@ pub(super) fn handle_connection(
         command,
         reply: Some(sender),
     })?;
-    let deadline = Instant::now() + UI_TIMEOUT;
+    let deadline = Instant::now()
+        + if mode == crate::mode::Mode::Real {
+            Duration::from_secs(20)
+        } else {
+            UI_TIMEOUT
+        };
     let reply = loop {
         if unsafe { WaitForSingleObject(stop.raw(), 0) } == WAIT_OBJECT_0 {
             return Err(io::Error::new(

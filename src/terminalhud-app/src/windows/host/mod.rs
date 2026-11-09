@@ -2,8 +2,13 @@
 mod arguments;
 mod command;
 mod context;
+mod controller;
 mod dispatch;
+mod hotkey_messages;
+mod hotkeys;
+mod initialize;
 mod menu_probe;
+mod message_loop;
 mod messages;
 mod options;
 mod queue;
@@ -18,3 +23,4 @@ pub const MENU_PROBE_MESSAGE: u32 = windows_sys::Win32::UI::WindowsAndMessaging:
 const WM_WAKE: u32 = windows_sys::Win32::UI::WindowsAndMessaging::WM_APP + 1;
 const TIMER_DURATION: usize = 1;
 const TIMER_QUIT: usize = 2;
+const TIMER_REFRESH: usize = 3;

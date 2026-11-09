@@ -1,4 +1,5 @@
 use super::REPLY_LEN;
+use crate::mode::Mode;
 use terminalhud_core::integration::{Availability, State, Status, VisibleState};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ReplyCode {
@@ -11,6 +12,9 @@ pub enum ReplyCode {
 #[derive(Clone, Copy, Debug)]
 pub struct Reply {
     pub code: ReplyCode,
+    pub mode: Mode,
+    /// Zero means both intended bindings registered; otherwise native failure code.
+    pub hotkey_error: u32,
     pub status: Status,
     pub focus_warning: bool,
     pub sequence: u64,
@@ -22,14 +26,18 @@ pub struct Reply {
 impl Reply {
     pub fn encode(self) -> [u8; REPLY_LEN] {
         let mut frame = [0; REPLY_LEN];
-        frame[..4].copy_from_slice(b"THR1");
+        frame[..4].copy_from_slice(b"THR2");
         frame[4] = match self.code {
             ReplyCode::Ok => 0,
             ReplyCode::Malformed => 1,
             ReplyCode::TransitionFailed => 2,
             ReplyCode::ShuttingDown => 3,
         };
-        frame[5] = 1; // Explicit prototype mode, never a real Terminal HUD claim.
+        frame[5] = match self.mode {
+            Mode::Prototype => 1,
+            Mode::Real => 2,
+        };
+        frame[28..32].copy_from_slice(&self.hotkey_error.to_le_bytes());
         frame[6] = match self.status.availability {
             Availability::Absent => 0,
             Availability::Managed => 1,
@@ -56,16 +64,13 @@ impl Reply {
 
     pub fn decode(frame: &[u8]) -> Result<Self, &'static str> {
         if frame.len() != REPLY_LEN
-            || &frame[..4] != b"THR1"
-            || frame[5] != 1
+            || &frame[..4] != b"THR2"
+            || !(1..=2).contains(&frame[5])
             || frame[8] > 1
             || frame[9] > 1
-            || frame[10..12]
-                .iter()
-                .chain(frame[28..32].iter())
-                .any(|v| *v != 0)
+            || frame[10..12].iter().any(|v| *v != 0)
         {
-            return Err("invalid prototype reply");
+            return Err("invalid runtime reply");
         }
         let code = match frame[4] {
             0 => ReplyCode::Ok,
@@ -97,6 +102,12 @@ impl Reply {
         }
         Ok(Self {
             code,
+            mode: if frame[5] == 1 {
+                Mode::Prototype
+            } else {
+                Mode::Real
+            },
+            hotkey_error: u32::from_le_bytes(frame[28..32].try_into().unwrap()),
             status: Status {
                 availability,
                 state,
@@ -112,7 +123,9 @@ impl Reply {
 
     pub fn display(self) -> String {
         format!(
-            "mode=prototype pid={} availability={:?} state={:?} result={:?} focus_warning={} host_console={} sequence={} menu_commands={}",
+            "mode={} hotkey_error={} pid={} availability={:?} state={:?} result={:?} focus_warning={} host_console={} sequence={} menu_commands={}",
+            self.mode.name(),
+            self.hotkey_error,
             self.process_id,
             self.status.availability,
             self.status.state,

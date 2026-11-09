@@ -1,10 +1,10 @@
 # Application shell prototype
 
-TER-10 supplies a tray-only Windows host and same-user command transport around
-an explicitly simulated controller. It creates no Windows Terminal, real HUD,
-hotkeys, settings UI, startup registration or installer. Real backend/adapter
-composition belongs to the following integration task. The long-term crate
-layout remains the one in [architecture.md](architecture.md).
+The Windows host provides a native tray and authenticated command transport.
+Its explicit prototype mode simulates HUD state without creating a terminal.
+The [real development slice](windows-development-slice.md) composes the accepted
+controller, backend and adapter using an isolated portable development runtime.
+The long-term crate layout remains the one in [architecture.md](architecture.md).
 
 The shared product controller selects Active for any command that creates a
 fresh target, including an absent-target visibility toggle. Existing targets
@@ -31,7 +31,8 @@ reply from its initialized UI/controller. The GUI binary creates a tray icon and
 native menu, with no console or visible main window. Repeated starts contact the
 primary instead of adding another icon. Ship both executables together.
 
-Every invocation requires `--prototype`. Replies always say `mode=prototype`.
+Every simulated invocation requires `--prototype` and replies say `mode=prototype`.
+Real commands use the separate reserved real scope and say `mode=real`.
 Managed state with no confirmed presentation, absent target and unmanaged state
 remain distinct in the protocol; a simulated state never claims a real terminal.
 The optional `--instance NAME` selects an isolated prototype scope, using 1–32
@@ -72,13 +73,13 @@ No credential prompting, administrator requirement or system-wide ACL changes
 are involved.
 
 Frames are fixed-size: requests are 8 bytes (`THP1`, command, zero reserved bytes),
-replies 32 bytes (`THR1`, result, explicit prototype mode and status/counters),
+replies 32 bytes (`THR2`, result, explicit runtime mode, status/counters and native hotkey error),
 then a 4-byte `THA1` receipt acknowledgement. Unknown commands, wrong versions,
 reserved-bit changes, truncated and oversized messages disconnect without a
 controller request. I/O uses cancellable overlapped operations with 1500 ms
 per-operation deadlines; UI replies have a 2 s deadline; the queue holds at most
 64 messages. Idle accept is cancellable. OVERLAPPED storage and buffers remain
-alive until cancellation completes. Startup readiness has an 8 s outer bound
+alive until cancellation completes. Prototype startup readiness has a 20 s outer bound
 plus a currently in-flight bounded transport operation.
 
 A timeout after a valid request is ambiguous: the UI might already have applied
@@ -111,5 +112,6 @@ applications. `--menu-probe` is an explicit prototype-only test hook that opens
 the real native menu; it does not select or dispatch commands itself.
 
 The separate [toolkit experiment](ui-toolkit-evaluation.md) established native
-and Tao tray-loop compatibility. Actual Terminal windows, hotkeys, click-through
-and focus behavior still require their dedicated native integration evidence.
+and Tao tray-loop compatibility. Real Terminal windows, hotkeys, click-through and focus behavior are composed by
+the [development slice](windows-development-slice.md) and require its separate
+desktop integration evidence.

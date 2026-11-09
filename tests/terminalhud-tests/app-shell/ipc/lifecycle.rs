@@ -60,3 +60,23 @@ fn authenticated_cli_roundtrip_singleton_and_reply_before_quit() {
     assert_eq!(reply.status.availability, Availability::Unmanaged);
     primary.wait();
 }
+#[test]
+fn prototype_cannot_use_the_reserved_real_scope() {
+    for binary in [
+        env!("CARGO_BIN_EXE_terminalhud"),
+        env!("CARGO_BIN_EXE_terminalhud-shell"),
+    ] {
+        let mut command = ProcessCommand::new(binary);
+        command.args([
+            "--prototype",
+            "--instance",
+            terminalhud_app::mode::REAL_INSTANCE,
+        ]);
+        if binary == env!("CARGO_BIN_EXE_terminalhud") {
+            command.arg("quit");
+        }
+        let output = command.output().unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert!(String::from_utf8_lossy(&output.stderr).contains("reserved"));
+    }
+}

@@ -3,7 +3,7 @@ use super::{
         native::{Handle, last},
         security::{self, Identity},
     },
-    read::read,
+    read::read_with_timeout,
     write::write,
 };
 use crate::protocol::{self, REPLY_LEN, Reply};
@@ -45,7 +45,7 @@ pub fn connect(identity: &Identity, instance: &str, timeout: Duration) -> io::Re
         if Instant::now() >= deadline {
             return Err(io::Error::new(
                 io::ErrorKind::TimedOut,
-                "prototype shell not ready/running",
+                "shell not ready/running",
             ));
         }
         thread::sleep(Duration::from_millis(10));
@@ -53,6 +53,28 @@ pub fn connect(identity: &Identity, instance: &str, timeout: Duration) -> io::Re
 }
 
 pub fn exchange(identity: &Identity, instance: &str, frame: &[u8]) -> io::Result<Reply> {
+    let timeout = if instance == crate::mode::REAL_INSTANCE {
+        22_000
+    } else {
+        super::IO_TIMEOUT
+    };
+    exchange_with_timeout(identity, instance, frame, timeout)
+}
+pub(super) fn exchange_with_timeout(
+    identity: &Identity,
+    instance: &str,
+    frame: &[u8],
+    timeout: u32,
+) -> io::Result<Reply> {
+    exchange_to_process(identity, instance, frame, timeout, None)
+}
+fn exchange_to_process(
+    identity: &Identity,
+    instance: &str,
+    frame: &[u8],
+    timeout: u32,
+    expected_process: Option<u32>,
+) -> io::Result<Reply> {
     if frame.len() > crate::protocol::REQUEST_LEN {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -60,11 +82,32 @@ pub fn exchange(identity: &Identity, instance: &str, frame: &[u8]) -> io::Result
         ));
     }
     let pipe = connect(identity, instance, Duration::from_secs(2))?;
+    if let Some(expected) = expected_process {
+        let mut actual = 0;
+        if unsafe { GetNamedPipeServerProcessId(pipe.raw(), &mut actual) } == 0 {
+            return Err(last("GetNamedPipeServerProcessId expected owner"));
+        }
+        if actual != expected {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "connected pipe owner differs from retained expected process; command not sent",
+            ));
+        }
+    }
     write(pipe.raw(), frame, None)?;
     let mut response = [0; REPLY_LEN];
-    let count = read(pipe.raw(), &mut response, None)?;
-    let reply = Reply::decode(&response[..count])
-        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    let count = read_with_timeout(pipe.raw(), &mut response, None, timeout).map_err(|error| {
+        io::Error::new(
+            error.kind(),
+            format!("{error}; command outcome may be ambiguous; inspect status before retrying"),
+        )
+    })?;
+    let reply = Reply::decode(&response[..count]).map_err(|error| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("{error}; command outcome may be ambiguous; inspect status before retrying"),
+        )
+    })?;
     write(pipe.raw(), b"THA1", None)?;
     Ok(reply)
 }
@@ -73,5 +116,26 @@ pub fn call(instance: &str, command: Command) -> io::Result<Reply> {
         &Identity::current()?,
         instance,
         &protocol::encode_request(command),
+    )
+}
+
+/// Send only to a retained expected owner, checked on the authenticated connection
+/// before any command bytes. The caller must retain that process's live identity.
+pub fn call_for_process(
+    instance: &str,
+    expected_process: u32,
+    command: Command,
+) -> io::Result<Reply> {
+    let timeout = if instance == crate::mode::REAL_INSTANCE {
+        22_000
+    } else {
+        super::IO_TIMEOUT
+    };
+    exchange_to_process(
+        &Identity::current()?,
+        instance,
+        &protocol::encode_request(command),
+        timeout,
+        Some(expected_process),
     )
 }

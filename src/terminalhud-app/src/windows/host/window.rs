@@ -10,7 +10,7 @@ use windows_sys::Win32::{
 pub(super) struct HostWindow(pub(super) HWND);
 impl HostWindow {
     pub(super) fn create(context: &HostContext) -> io::Result<Self> {
-        let class = wide("TerminalHUD.Prototype.Host");
+        let class = wide("TerminalHUD.Host");
         let module = unsafe { GetModuleHandleW(ptr::null()) };
         let wc = WNDCLASSW {
             lpfnWndProc: Some(window_proc),
@@ -23,7 +23,7 @@ impl HostWindow {
         {
             return Err(last("RegisterClass"));
         }
-        let name = wide("TerminalHUD prototype controller (message-only)");
+        let name = wide("TerminalHUD controller (message-only)");
         // The boxed context outlives DestroyWindow; WM_NCCREATE only stores its address.
         let hwnd = unsafe {
             CreateWindowExW(
@@ -47,6 +47,29 @@ impl HostWindow {
         Ok(Self(hwnd))
     }
 }
+impl HostWindow {
+    pub(super) fn configure_timers(&self, options: &super::HostOptions) -> io::Result<()> {
+        if let Some(duration) = options.exit_after
+            && unsafe {
+                SetTimer(
+                    self.0,
+                    super::TIMER_DURATION,
+                    duration.as_millis().clamp(100, 60_000) as u32,
+                    None,
+                )
+            } == 0
+        {
+            return Err(last("SetTimer duration"));
+        }
+        if options.mode == crate::mode::Mode::Real
+            && unsafe { SetTimer(self.0, super::TIMER_REFRESH, 200, None) } == 0
+        {
+            return Err(last("SetTimer observation"));
+        }
+        Ok(())
+    }
+}
+
 impl Drop for HostWindow {
     fn drop(&mut self) {
         unsafe {

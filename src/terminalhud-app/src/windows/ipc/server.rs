@@ -17,8 +17,8 @@ use windows_sys::Win32::{
 };
 /// Retained across every accept and until the UI is torn down.
 pub struct Server {
-    pipe: Arc<Handle>,
-    stop: Arc<Handle>,
+    pub(super) pipe: Arc<Handle>,
+    pub(super) stop: Arc<Handle>,
     worker: Option<JoinHandle<()>>,
 }
 impl Server {
@@ -56,7 +56,12 @@ impl Server {
             worker: None,
         })
     }
-    pub fn start(&mut self, identity: Identity, ui: UiSender) -> io::Result<()> {
+    pub fn start(
+        &mut self,
+        identity: Identity,
+        ui: UiSender,
+        mode: crate::mode::Mode,
+    ) -> io::Result<()> {
         let pipe = self.pipe.clone();
         let stop = self.stop.clone();
         self.worker = Some(
@@ -64,7 +69,7 @@ impl Server {
                 .name("terminalhud-ipc".into())
                 .spawn(move || {
                     while unsafe { WaitForSingleObject(stop.raw(), 0) } != WAIT_OBJECT_0 {
-                        let result = handle_connection(&pipe, &stop, &identity, &ui);
+                        let result = handle_connection(&pipe, &stop, &identity, &ui, mode);
                         unsafe {
                             DisconnectNamedPipe(pipe.raw());
                         }

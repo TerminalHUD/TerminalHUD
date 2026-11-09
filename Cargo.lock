@@ -1500,6 +1500,7 @@ name = "terminalhud-app"
 version = "0.1.0"
 dependencies = [
  "hudswitch-windows",
+ "serde_json",
  "tao",
  "terminalhud-core",
  "terminalhud-windows-terminal",
