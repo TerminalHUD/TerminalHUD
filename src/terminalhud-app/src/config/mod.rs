@@ -11,3 +11,11 @@ mod tests;
 
 #[cfg(test)]
 mod shape_tests;
+
+mod file_create;
+mod file_read;
+mod file_type;
+mod platform;
+pub(crate) use file_create::ensure_file;
+pub(crate) use file_read::validate_file;
+pub(crate) use platform::{open_document, settings_path};

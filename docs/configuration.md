@@ -7,8 +7,9 @@ The initial Windows implementation stores per-user configuration at:
 ```
 
 Schema version 1 is implemented by the portable app JSON codec. The complete
-example below represents the built-in defaults. This foundation does not yet
-read settings files, register shortcuts, apply preferences, or reload the runtime.
+example below represents the built-in defaults. Local configuration commands
+can read and open settings. Applying preferences, registering shortcuts and
+reloading the runtime remain future work.
 
 ```json
 {
@@ -89,12 +90,44 @@ preserves the current valid value. These APIs do not write or replace a file.
 
 ## Configuration commands
 
-The first release should provide commands resembling:
+These commands are implemented on native Windows and do not start or contact
+the tray owner. Do not combine them with `--prototype`, `--instance` or
+`--development` runtime flags.
 
 ```text
 terminalhud config path
-terminalhud config open
 terminalhud config validate
+terminalhud config open
+```
+
+`path` prints the settings filename, resolved from the current user's Windows
+Local App Data known folder (including folder redirection). Resolution uses no
+folder-creation flag. The usual location is the path at the top of this page.
+Neither `path` nor `validate` creates directories or files.
+
+`validate` reads at most 1 MiB of UTF-8 JSON and applies the strict schema above.
+Missing, unreadable, oversized, invalid UTF-8 and invalid configuration files are
+errors. LF and CRLF are accepted. A successful command prints the validated path;
+it does not apply any preferences or alter file contents.
+
+`open` creates parent directories and default settings only when the file is
+missing, using exclusive create-new semantics. An existing regular file is
+preserved byte for byte, including malformed JSON, so it can be corrected.
+Concurrent creation never truncates another writer's file. Directories, symlinks
+and other nonregular settings files are rejected. Windows receives the exact
+absolute document path through `ShellExecuteExW` with its `open` verb; no command
+shell or editor executable search is used. A missing document association or
+other opening failure is reported, without an editor fallback. Newly created
+settings remain available if opening fails.
+
+Success exits with code 0 and prints a result to stdout. Errors exit with code 2
+and print a diagnostic to stderr. File errors identify the affected path.
+These commands do not apply settings, register startup or shortcuts, resolve
+profiles, or implement runtime reload.
+
+Future commands remain planned:
+
+```text
 terminalhud reload
 terminalhud integrations list
 terminalhud integrations preview <shell>
@@ -102,9 +135,9 @@ terminalhud integrations install <shell>
 terminalhud integrations remove <shell>
 ```
 
-Invalid configuration must not crash the running HUD or silently replace the
-file. TerminalHUD retains the last valid in-memory configuration, reports the
-validation error through logs and tray status, and waits for a corrected file.
+Future runtime reload must retain the last valid in-memory configuration on an
+invalid candidate, report the error through logs and tray status, and wait for a
+corrected file. The local commands do not yet connect this policy to the runtime.
 
 ## Fixed initial Windows-milestone values
 

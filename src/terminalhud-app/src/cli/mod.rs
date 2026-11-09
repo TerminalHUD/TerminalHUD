@@ -1,12 +1,21 @@
 //! Console argument/exit semantics, separate from the GUI entry point.
 mod arguments;
+mod configuration;
 #[cfg(windows)]
 pub(crate) use arguments::validate_instance;
+pub use configuration::ConfigCommand;
 #[cfg(windows)]
 mod startup;
 pub use arguments::{Action, Arguments, USAGE, parse};
 
 pub fn run(args: Vec<String>) -> Result<String, String> {
+    run_with_config(args, configuration::run)
+}
+
+fn run_with_config(
+    args: Vec<String>,
+    local: impl FnOnce(ConfigCommand) -> Result<String, String>,
+) -> Result<String, String> {
     #[cfg(windows)]
     if args.first().is_some_and(|arg| arg == "--session-bridge") {
         crate::windows::development::run_bridge(&args[1..])?;
@@ -16,6 +25,9 @@ pub fn run(args: Vec<String>) -> Result<String, String> {
     if args.action == Action::Help {
         return Ok(USAGE.into());
     }
+    if let Action::Config(command) = args.action {
+        return local(command);
+    }
     #[cfg(windows)]
     {
         use crate::windows::ipc;
@@ -24,7 +36,7 @@ pub fn run(args: Vec<String>) -> Result<String, String> {
             Action::Command(command) => {
                 ipc::call(&args.instance, command).map_err(|e| e.to_string())?
             }
-            Action::Help => unreachable!(),
+            Action::Help | Action::Config(_) => unreachable!(),
         };
         if reply.mode != args.mode {
             return Err("runtime mode mismatch; command outcome is ambiguous".into());
@@ -46,3 +58,6 @@ pub fn run(args: Vec<String>) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod configuration_tests;
