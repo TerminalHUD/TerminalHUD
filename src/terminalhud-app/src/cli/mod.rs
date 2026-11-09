@@ -31,18 +31,9 @@ fn run_with_config(
     #[cfg(windows)]
     {
         use crate::windows::ipc;
-        let reply = match args.action {
-            Action::Run => startup::ensure_running(&args)?,
-            Action::ReloadConfiguration => ipc::call_request(
-                &args.instance,
-                crate::protocol::Request::ReloadConfiguration,
-            )
-            .map_err(|e| e.to_string())?,
-            Action::Command(command) => {
-                ipc::call(&args.instance, command).map_err(|e| e.to_string())?
-            }
-            Action::Help | Action::Config(_) => unreachable!(),
-        };
+        let reply = runtime_reply(&args, startup::ensure_running, |instance, request| {
+            ipc::call_request(instance, request).map_err(|e| e.to_string())
+        })?;
         if reply.mode != args.mode {
             return Err("runtime mode mismatch; command outcome is ambiguous".into());
         }
@@ -61,6 +52,21 @@ fn run_with_config(
     #[cfg(not(windows))]
     {
         Err("the prototype tray/IPC host currently requires native Windows".into())
+    }
+}
+
+#[cfg(any(windows, test))]
+fn runtime_reply(
+    args: &Arguments,
+    start: impl FnOnce(&Arguments) -> Result<crate::protocol::Reply, String>,
+    send: impl FnOnce(&str, crate::protocol::Request) -> Result<crate::protocol::Reply, String>,
+) -> Result<crate::protocol::Reply, String> {
+    use crate::protocol::Request;
+    match args.action {
+        Action::Run => start(args),
+        Action::ReloadConfiguration => send(&args.instance, Request::ReloadConfiguration),
+        Action::Command(command) => send(&args.instance, Request::Command(command)),
+        Action::Help | Action::Config(_) => unreachable!(),
     }
 }
 

@@ -2,6 +2,7 @@
 mod arguments;
 mod command;
 mod configuration;
+mod configuration_ui;
 mod context;
 mod controller;
 mod dispatch;
