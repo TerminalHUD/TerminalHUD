@@ -45,4 +45,5 @@ path = "src/shell_main.rs"
 
 [[example]]
 name = "app-slice-proof"
+test = true
 path = "../../tests/terminalhud-tests/app-shell/slice-proof/main.rs"
