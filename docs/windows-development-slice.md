@@ -171,3 +171,49 @@ The [accepted adapter evidence](windows-terminal-feasibility.md) establishes its
 portable fixture behavior; it does not establish this app composition's desktop
 acceptance. Record new actual outcomes and limitations before calling this slice
 demonstrated.
+
+## Explicit desktop runner
+
+Build the runner together with the app binaries, without executing it:
+
+```powershell
+cargo build --locked -p terminalhud-app --bins --example app-slice-proof
+```
+
+After independent review of that exact source, runtime settings and compiled
+artifact hashes, the desktop owner can approve this explicit invocation:
+
+```powershell
+& "$env:CARGO_TARGET_DIR\debug\examples\app-slice-proof.exe" 'C:\absolute-task-directory\runtime.json'
+```
+
+The outer operator must preserve external settings/fragment baselines, verify no
+existing real endpoint/owned processes, apply a 90 s deadline, and record the
+exact app/runner/runtime hashes before execution. The runner refuses an existing
+real endpoint. It creates only its own ordinary blue sink, makes one checked
+foreground request before launching the app, then drives real IPC and independently
+reverifies the fresh target through the adapter's retained ancestry/session guard.
+It checks Active/Hidden/Active and Passive/Hidden/Passive, closes only its verified
+fresh synthetic session with no user work, observes Absent and no-spawn Passive,
+and relaunches Active. Its single guarded click occurs at final Passive after
+all activation checks, so it cannot be used to obtain foreground eligibility.
+No cursor restoration or keyboard injection occurs. Quit must restore original
+owned style bits/visibility and leave the exact replacement session alive.
+
+A genuine foreground refusal ends the proof with failed/safe recovery evidence;
+no grant, synthetic shortcut or focus workaround is attempted. Cleanup requests
+only authenticated Quit from the exact retained real app owner. It never kills
+the tray/terminal or closes a session after Quit. If ownership/readiness cannot
+be established or Quit fails, the operator must inspect the preserved owner and
+retry restoration through its normal IPC, with the exact recorded identity.
+The original terminal closed during the lifecycle case contains only the fresh
+synthetic interactive shell, with no injected or user work. The replacement shell
+is deliberately left open after Quit for a genuine user command to demonstrate
+post-Quit usability; process liveness alone is not a command-input proof.
+
+The runner reuses the accepted adapter proof's ownership, fullscreen, sink,
+relative-order and balanced-click code. Unrelated Terminal windows are read-only
+style/visibility witnesses and external baseline checks remain the outer runner's
+responsibility. A pass establishes this bounded native state/lifecycle slice.
+It leaves physical selected-shortcut operation and actual post-Quit command input
+unclaimed until separately observed, without a manual hotkey session.
