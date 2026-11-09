@@ -84,3 +84,11 @@ Prompt-aware Escape is a convenience, not the only exit path. `Win+Backtick`
 always toggles Active to Passive even when a shell has no integration or an
 interactive program does not use Escape.
 
+
+## Implemented MVP scripts
+
+The package includes explicit Preview, Install and Remove scripts. See the
+[shell integration guide](../integrations/shells/README.md) for supported modes,
+backup behavior, versioned upgrade resolution and isolated tests. The MVP supports
+PSReadLine Windows mode and Bash Readline Emacs mode. PSReadLine Emacs/Vi and
+custom Escape handlers are detected and preserved with a warning.
