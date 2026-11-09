@@ -49,3 +49,13 @@ fn runtime_flags_and_extra_arguments_are_rejected_for_local_commands() {
         );
     }
 }
+
+#[test]
+fn reload_is_a_runtime_request() {
+    assert_eq!(
+        parse(vec!["config".into(), "reload".into()])
+            .unwrap()
+            .action,
+        Action::ReloadConfiguration
+    );
+}
