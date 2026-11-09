@@ -46,6 +46,10 @@ impl<B: Backend> ShellController<B> {
         self.controller.status()
     }
 
+    pub fn refresh(&mut self) -> Result<Status, TransitionError<B::Error>> {
+        self.controller.refresh().map(|outcome| outcome.status)
+    }
+
     pub fn execute(
         &mut self,
         command: Command,

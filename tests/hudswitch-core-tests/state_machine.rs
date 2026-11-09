@@ -13,6 +13,7 @@ mod launch;
 mod lifecycle;
 mod recovery;
 mod recovery_focus;
+mod refresh;
 mod serialization;
 mod shutdown;
 mod transitions;

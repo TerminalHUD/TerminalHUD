@@ -5,6 +5,7 @@ mod apply;
 mod dispatch;
 mod failure;
 mod recovery;
+mod refresh;
 mod shutdown;
 mod transition;
 mod validate;
