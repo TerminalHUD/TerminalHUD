@@ -90,9 +90,10 @@ preserves the current valid value. These APIs do not write or replace a file.
 
 ## Configuration commands
 
-These commands are implemented on native Windows and do not start or contact
-the tray owner. Do not combine them with `--prototype`, `--instance` or
-`--development` runtime flags.
+These commands are implemented on native Windows. `path`, `validate`, and
+`open` do not start or contact the tray owner; `reload` contacts the running
+real owner without starting it. Do not combine them with `--prototype`,
+`--instance` or `--development` runtime flags.
 
 ```text
 terminalhud config path
