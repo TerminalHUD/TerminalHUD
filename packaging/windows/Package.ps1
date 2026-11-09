@@ -2,7 +2,7 @@ function Read-Package([string] $Package) {
     Assert-SafeTree $Package
     $manifestPath = Join-Path $Package 'package.json'
     Assert-SafeTree $manifestPath
-    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($manifest.schema_version -ne 1 -or $manifest.product -cne 'TerminalHUD') { throw 'Invalid package manifest' }
     Assert-BuildId $manifest.build_id
     if (!$manifest.version -or $manifest.source_commit -cnotmatch '^[a-f0-9]{40}$') { throw 'Missing version/build identity' }

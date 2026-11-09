@@ -38,7 +38,7 @@ function Install-Shortcut([string] $Root, $Receipt, [scriptblock] $CreateShortcu
         # Record both previous and new hashes before atomic activation for crash recovery.
         $Receipt.shortcuts = @($Receipt.shortcuts) + @($record)
         Save-Receipt $Root $Receipt
-        if ($null -ne $expected) { [IO.File]::Replace($temporary, $path, $null) }
+        if ($null -ne $expected) { [IO.File]::Replace($temporary, $path, [NullString]::Value) }
         else { [IO.File]::Move($temporary, $path) }
         $Receipt.shortcuts = @($record)
         Save-Receipt $Root $Receipt

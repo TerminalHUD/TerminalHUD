@@ -7,7 +7,7 @@ function Read-Receipt([string] $Root) {
     }
     if ((Get-Item -LiteralPath $path).Length -gt 1MB) { throw 'Installation receipt too large' }
     Assert-SafeTree $path
-    $receipt = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+    $receipt = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($receipt.schema_version -ne 1 -or $receipt.product -cne 'TerminalHUD' -or $receipt.installed -isnot [bool]) { throw 'Invalid installation receipt' }
     Assert-BuildId $receipt.active_build
     $seen = @{}
@@ -40,7 +40,7 @@ function Save-Receipt([string] $Root, $Receipt) {
     $json = $Receipt | ConvertTo-Json -Depth 10
     try {
         [IO.File]::WriteAllText($temporary, $json, (New-Object Text.UTF8Encoding($false)))
-        if (Test-Path -LiteralPath $path) { [IO.File]::Replace($temporary, $path, $null) }
+        if (Test-Path -LiteralPath $path) { [IO.File]::Replace($temporary, $path, [NullString]::Value) }
         else { [IO.File]::Move($temporary, $path) }
     } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary } }
 }

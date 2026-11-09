@@ -12,12 +12,14 @@ function New-UninstallPlan([string] $Root, [scriptblock] $ReadStartup) {
 }
 function Invoke-Uninstall([string] $Root, [scriptblock] $ReadStartup, [scriptblock] $RemoveStartup) {
     $plan = New-UninstallPlan $Root $ReadStartup
-    & $RemoveStartup $plan.startup
-    $receipt = Read-Receipt $Root
-    Remove-Shortcut $receipt
-    $receipt.shortcuts = @()
-    $receipt.installed = $false
-    Save-Receipt $Root $receipt
+    try {
+        & $RemoveStartup $plan.startup
+        $receipt = Read-Receipt $Root
+        Remove-Shortcut $receipt
+        $receipt.shortcuts = @()
+        $receipt.installed = $false
+        Save-Receipt $Root $receipt
+    } catch { throw "Uninstall may be partial: startup or shortcut removal may have completed. Re-read the plan before retrying. $($_.Exception.Message)" }
     return $plan
 }
 function New-CleanupPlan([string] $Root) {

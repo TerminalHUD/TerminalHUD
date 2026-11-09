@@ -3,7 +3,7 @@ function Read-Startup {
     $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Run', $false)
     if ($null -eq $key) { return $null }
     try {
-        if ($key.GetValueNames() -cnotcontains 'TerminalHUD') { return $null }
+        if ($key.GetValueNames() -notcontains 'TerminalHUD') { return $null }
         return [pscustomobject]@{ kind = $key.GetValueKind('TerminalHUD').ToString(); value = $key.GetValue('TerminalHUD', $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames) }
     } finally { $key.Dispose() }
 }
@@ -18,8 +18,11 @@ function Remove-OwnedStartup($Expected) {
     }
     try {
         $actual = $null
-        if ($key.GetValueNames() -ccontains 'TerminalHUD') { $actual = [pscustomobject]@{ kind = $key.GetValueKind('TerminalHUD').ToString(); value = $key.GetValue('TerminalHUD', $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames) } }
+        if ($key.GetValueNames() -contains 'TerminalHUD') { $actual = [pscustomobject]@{ kind = $key.GetValueKind('TerminalHUD').ToString(); value = $key.GetValue('TerminalHUD', $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames) } }
         if (($null -eq $Expected) -ne ($null -eq $actual) -or ($null -ne $Expected -and ($Expected.kind -cne $actual.kind -or $Expected.value -cne $actual.value))) { throw 'Startup entry changed since preparation; preserved' }
-        if ($null -ne $actual) { $key.DeleteValue('TerminalHUD', $true) }
+        if ($null -ne $actual) {
+            $key.DeleteValue('TerminalHUD', $true)
+            if ($key.GetValueNames() -contains 'TerminalHUD') { throw 'Startup deletion completed but value changed during verification; inspect a new plan' }
+        }
     } finally { $key.Dispose() }
 }
