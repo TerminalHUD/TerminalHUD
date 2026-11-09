@@ -322,3 +322,46 @@ since launch, including a final observation guard. Otherwise the restored sessio
 stays open for explicit disposition; possible user work is preserved. This is a
 bounded observation policy, not an atomic guarantee against activity between a
 sample and the checked close. Unrelated windows/settings remain read-only witnesses.
+
+### Observed full lifecycle
+
+`--full-observe MANIFEST NEW_TRACE` wraps the original full lifecycle rather than
+running a reduced scenario. It keeps both Hidden return-state checks, Passive
+before the first target close, the 400 ms absent polling check, fresh replacement
+nonce/session checks, the one existing final Passive click, and normal Quit with
+original-state/session preservation. The default proof remains available.
+
+The same bounded read-only monitor supplies a concrete phase ledger. Observation
+uncertainty stays sticky across phases and generations. Before the mid-run close,
+the harness repeats the exact owned Passive/sink/native checks and observation
+guard. Activity, unknown foreground or missing coverage stops further scripted
+mutations; even a NULL sample during the intended close remains uncertainty and
+can prevent relaunch. Normal authenticated Quit is attempted once for the
+retained app owner, including a failed startup with verified ownership. A failed
+replacement assertion retains the verified replacement for restoration; a launch
+attempt without verified replacement identity cannot establish fixture absence.
+
+The click interval brackets only the existing guarded click operation. Input
+activity inside that interval cannot exclude concurrent input from another
+source. The report preserves that caveat; it never resets earlier uncertainty or
+masks later activity. The restored final replacement deliberately stays alive
+and unmanaged after Quit. It is an expected retained fixture, not a zero-process
+cleanup claim, and needs explicit disposition after possible user use.
+
+A create-new `NEW_TRACE` path records samples; its `.result.json` sidecar uses
+`terminalhud.full-observe.v1`. It separates raw `Passed`, `Failed` or `Interrupted`
+from phase-local and sticky observation quality, the last completed phase,
+planned-click interval, once-only Quit/restoration, exact retained epoch and
+fixture disposition. A monitor stop is `Interrupted`, not a product failure.
+Completion of the final native assertions freezes raw `Passed`; later metadata,
+observation or witness errors remain separate and prevent a qualified success.
+The outer runner must validate this sidecar and actual retained identities;
+`APP_SLICE_PASS` alone cannot qualify an observed run.
+
+Two separately approved matched startup-only trials observed native Active with
+no disturbance observed, then verified normal Quit/session preservation and
+separate disposable-fixture closure. They do not establish a full automated
+lifecycle pass or explain the historical Present timeouts. The observed full mode
+requires its own exact source/artifact/runtime review and a new confirmed
+hands-off interval before execution. Product presentation behavior and selected
+shortcut bindings are unchanged.

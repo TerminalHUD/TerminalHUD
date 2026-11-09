@@ -7,6 +7,7 @@ mod active;
 mod client;
 #[path = "../../../windows-terminal/proof/windows/foreground_setup.rs"]
 mod foreground_setup;
+mod full_observe;
 mod lifecycle;
 mod monitor;
 #[path = "../../../windows-terminal/proof/windows/observe.rs"]
@@ -21,10 +22,18 @@ mod underlay;
 mod witness;
 pub(super) enum Completion {
     FullProof,
+    FullObserved(i32),
     Startup(crate::observation::decision::Report),
     PreconditionRefused,
 }
 pub(super) fn run(args: Vec<String>) -> Result<Completion> {
+    if args.first().is_some_and(|a| a == "--full-observe") && args.len() == 3 {
+        return full_observe::run(
+            std::path::Path::new(&args[1]),
+            std::path::Path::new(&args[2]),
+        )
+        .map(Completion::FullObserved);
+    }
     if args.first().is_some_and(|a| a == "--startup-observe") && args.len() == 3 {
         return startup_observe::run(
             std::path::Path::new(&args[1]),
@@ -56,7 +65,7 @@ pub(super) fn run(args: Vec<String>) -> Result<Completion> {
     let result = (|| {
         foreground_setup::prepare(&sink)?;
         let owner = client::Owner::start(&manifest)?;
-        let result = lifecycle::demonstrate(&owner, &terminal, &profile, &before, &sink);
+        let result = lifecycle::demonstrate(&owner, &terminal, &profile, &before, &sink, None);
         // The guard issues only authenticated Quit to this exact retained owner;
         // it never kills a process or closes a terminal after restoration.
         drop(owner);

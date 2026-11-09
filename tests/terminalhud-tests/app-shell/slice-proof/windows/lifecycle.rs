@@ -1,5 +1,10 @@
 use super::{
-    Command, Result, active, client::Owner, observe, target::Launched, underlay::Underlay,
+    Command, Result, active,
+    client::Owner,
+    full_observe::{self, Trace},
+    observe,
+    target::Launched,
+    underlay::Underlay,
 };
 use std::{collections::HashSet, path::Path, thread, time::Duration};
 use terminalhud_core::integration::{Availability, State, VisibleState};
@@ -45,33 +50,122 @@ pub(super) fn demonstrate(
     profile: &terminalhud_windows_terminal::Guid,
     before: &HashSet<isize>,
     sink: &Underlay,
+    mut observation: Option<&mut Trace>,
 ) -> Result<()> {
     let target = Launched::read(owner, terminal, profile, before)?;
-    check(owner, &target, sink, State::Active)?;
-    for (command, state) in [
+    full_observe::end(
+        &mut observation,
+        check(owner, &target, sink, State::Active),
+        Some(&target),
+        true,
+    )?;
+    for (name, command, state) in [
         (
+            "hide-active",
             Command::VisibilityToggle,
             State::Hidden {
                 return_state: VisibleState::Active,
             },
         ),
-        (Command::VisibilityToggle, State::Active),
-        (Command::Passive, State::Passive),
+        ("restore-active", Command::VisibilityToggle, State::Active),
+        ("passive", Command::Passive, State::Passive),
         (
+            "hide-passive",
             Command::VisibilityToggle,
             State::Hidden {
                 return_state: VisibleState::Passive,
             },
         ),
-        (Command::VisibilityToggle, State::Passive),
-        (Command::InteractionToggle, State::Active),
-        (Command::Passive, State::Passive),
+        ("restore-passive", Command::VisibilityToggle, State::Passive),
+        ("activate", Command::InteractionToggle, State::Active),
+        ("passive-before-close", Command::Passive, State::Passive),
     ] {
-        owner.call(command)?;
-        check(owner, &target, sink, state)?;
+        full_observe::begin(&mut observation, name, 1)?;
+        let result = owner
+            .call(command)
+            .and_then(|_| check(owner, &target, sink, state));
+        full_observe::end(
+            &mut observation,
+            result,
+            Some(&target),
+            state == State::Active,
+        )?;
     }
-    // Close only the verified fresh synthetic session, with no work/user input.
-    active::ensure(&target)?;
+    // Original sequence reaches Passive here. The observer may prevent closing
+    // on uncertainty, but never changes the original close/assertion ordering.
+    full_observe::begin(&mut observation, "close-first", 1)?;
+    if let Some(trace) = &mut observation {
+        trace.close_gate(&target, check(owner, &target, sink, State::Passive))?;
+    }
+    let closed = close_first(owner, &target);
+    if let Some(trace) = &mut observation {
+        trace.after_close(&target, closed)?;
+    } else {
+        closed?;
+    }
+    full_observe::begin(&mut observation, "absent-passive", 1)?;
+    let no_spawn = owner.call(Command::Passive).and_then(|reply| {
+        if reply.status.availability == Availability::Absent {
+            Ok(())
+        } else {
+            Err("absent Passive created a target".into())
+        }
+    });
+    full_observe::end(&mut observation, no_spawn, None, false)?;
+    full_observe::begin(&mut observation, "absent-poll", 1)?;
+    thread::sleep(Duration::from_millis(400));
+    let absent = owner.call(Command::Status).and_then(|reply| {
+        if reply.status.availability == Availability::Absent {
+            Ok(())
+        } else {
+            Err("lifecycle polling respawned a target".into())
+        }
+    });
+    full_observe::end(&mut observation, absent, None, false)?;
+    full_observe::begin(&mut observation, "relaunch-active", 2)?;
+    if let Some(trace) = &mut observation {
+        trace.relaunch_attempt();
+    }
+    let launched = (|| -> Result<Launched> {
+        owner.call(Command::VisibilityToggle)?;
+        let replacement = Launched::read(owner, terminal, profile, before)?;
+        if replacement.nonce == target.nonce || replacement.session_id == target.session_id {
+            return Err("relaunch reused old session identity".into());
+        }
+        if let Some(trace) = &mut observation {
+            trace.remember(&replacement)?;
+        }
+        check(owner, &replacement, sink, State::Active)?;
+        Ok(replacement)
+    })();
+    let replacement = match launched {
+        Ok(target) => target,
+        Err(error) => return full_observe::end(&mut observation, Err(error), None, true),
+    };
+    full_observe::end(&mut observation, Ok(()), Some(&replacement), true)?;
+    full_observe::begin(&mut observation, "final-passive", 2)?;
+    let passive = owner
+        .call(Command::Passive)
+        .and_then(|_| check(owner, &replacement, sink, State::Passive));
+    full_observe::end(&mut observation, passive, Some(&replacement), false)?;
+    // Only after every Active check: the click is never used to gain foreground eligibility.
+    full_observe::begin(&mut observation, "planned-click", 2)?;
+    let click_begin = observation.as_mut().map(|trace| trace.click_begin());
+    let clicked = active::click_sink(&replacement, sink);
+    if let (Some(trace), Some(begin)) = (&mut observation, click_begin) {
+        trace.click_end(begin, clicked.is_ok());
+    }
+    full_observe::end(&mut observation, clicked, Some(&replacement), false)?;
+    full_observe::begin(&mut observation, "quit-restore", 2)?;
+    let restored = owner
+        .call(Command::Quit)
+        .and_then(|_| owner.wait_exit())
+        .and_then(|_| replacement.restored());
+    full_observe::end(&mut observation, restored, Some(&replacement), false)?;
+    Ok(())
+}
+fn close_first(owner: &Owner, target: &Launched) -> Result<()> {
+    active::ensure(target)?;
     if unsafe { PostMessageW(target.hwnd as _, WM_CLOSE, 0, 0) } == 0 {
         return Err("owned target close refused".into());
     }
@@ -79,27 +173,5 @@ pub(super) fn demonstrate(
         owner
             .call(Command::Status)
             .is_ok_and(|r| r.status.availability == Availability::Absent)
-    })?;
-    let no_spawn = owner.call(Command::Passive)?;
-    if no_spawn.status.availability != Availability::Absent {
-        return Err("absent Passive created a target".into());
-    }
-    thread::sleep(Duration::from_millis(400));
-    if owner.call(Command::Status)?.status.availability != Availability::Absent {
-        return Err("lifecycle polling respawned a target".into());
-    }
-    owner.call(Command::VisibilityToggle)?;
-    let replacement = Launched::read(owner, terminal, profile, before)?;
-    if replacement.nonce == target.nonce || replacement.session_id == target.session_id {
-        return Err("relaunch reused old session identity".into());
-    }
-    check(owner, &replacement, sink, State::Active)?;
-    owner.call(Command::Passive)?;
-    check(owner, &replacement, sink, State::Passive)?;
-    // Only after every Active check: the click is never used to gain foreground eligibility.
-    active::click_sink(&replacement, sink)?;
-    owner.call(Command::Quit)?;
-    owner.wait_exit()?;
-    replacement.restored()?;
-    Ok(())
+    })
 }

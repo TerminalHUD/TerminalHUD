@@ -9,7 +9,7 @@ use windows_sys::Win32::{
     Foundation::*,
     System::{Diagnostics::ToolHelp::*, Threading::*},
 };
-fn times(handle: HANDLE) -> Result<(u64, u64)> {
+pub(super) fn times(handle: HANDLE) -> Result<(u64, u64)> {
     let (mut start, mut end, mut kernel, mut user) = unsafe {
         (
             std::mem::zeroed(),
@@ -101,4 +101,15 @@ fn an_existing_or_replacement_gui_cannot_be_adopted_as_our_startup_owner() {
     assert!(!belongs_to_cli(10, 10, 99, 100, 150));
     assert!(!belongs_to_cli(10, 10, 151, 100, 150));
     assert!(!belongs_to_cli(10, 10, 120, 100, 0));
+}
+
+pub(super) fn process_json(handle: HANDLE) -> Result<serde_json::Value> {
+    let mut path = vec![0u16; 32768];
+    let mut length = path.len() as u32;
+    if unsafe { QueryFullProcessImageNameW(handle, 0, path.as_mut_ptr(), &mut length) } == 0 {
+        return Err(std::io::Error::last_os_error().into());
+    }
+    Ok(
+        serde_json::json!({"pid":unsafe{GetProcessId(handle)},"created":times(handle)?.0.to_string(),"executable":String::from_utf16_lossy(&path[..length as usize])}),
+    )
 }

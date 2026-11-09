@@ -11,6 +11,7 @@ fn main() {
     #[cfg(windows)]
     match windows::run(args) {
         Ok(windows::Completion::FullProof) => (),
+        Ok(windows::Completion::FullObserved(exit)) => std::process::exit(exit),
         Ok(windows::Completion::Startup(report)) => std::process::exit(report.exit_code()),
         Ok(windows::Completion::PreconditionRefused) => std::process::exit(3),
         Err(error) => {

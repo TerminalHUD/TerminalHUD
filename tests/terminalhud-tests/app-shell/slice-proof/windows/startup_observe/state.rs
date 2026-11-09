@@ -8,7 +8,7 @@ pub(super) fn identity(target: &Launched) -> Window {
         tid: target.tid,
     }
 }
-pub(super) fn sink_identity(sink: &Underlay) -> Result<Window> {
+pub(in super::super) fn sink_identity(sink: &Underlay) -> Result<Window> {
     sink.ensure_owned()?;
     let mut pid = 0;
     let tid = unsafe { GetWindowThreadProcessId(sink.hwnd(), &mut pid) };

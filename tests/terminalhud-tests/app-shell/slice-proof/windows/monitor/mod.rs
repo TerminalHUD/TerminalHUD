@@ -68,6 +68,13 @@ impl Monitor {
             origin,
         })
     }
+    pub fn elapsed_us(&self) -> u64 {
+        self.origin
+            .elapsed()
+            .as_micros()
+            .try_into()
+            .unwrap_or(u64::MAX)
+    }
     pub fn mark(&self, stage: Stage) -> Result<u64> {
         let mut buffer = self
             .buffer

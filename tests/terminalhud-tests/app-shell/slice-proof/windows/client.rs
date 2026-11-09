@@ -30,6 +30,7 @@ pub(super) struct Owner {
     pub startup_failure: Option<String>,
     pub startup_reply: Reply,
     quit_dispatched: Cell<bool>,
+    quit_confirmed: Cell<bool>,
 }
 impl Owner {
     pub(super) fn start(manifest: &Path) -> Result<Self> {
@@ -55,6 +56,7 @@ impl Owner {
             startup_reply: reply,
             startup_failure: None,
             quit_dispatched: Cell::new(false),
+            quit_confirmed: Cell::new(false),
         };
         owner.ensure()?;
         if !startup.success || reply.code != ReplyCode::Ok {
@@ -96,7 +98,20 @@ impl Owner {
         {
             return Err("Quit did not confirm Unmanaged; restoration remains unconfirmed".into());
         }
+        if command == Command::Quit {
+            self.quit_confirmed.set(true);
+        }
         Ok(reply)
+    }
+    pub(super) fn epoch(&self) -> Result<serde_json::Value> {
+        super::startup_identity::process_json(self.process.as_raw_handle())
+    }
+    pub(super) fn quit_state(&self) -> (bool, bool, bool) {
+        (
+            self.quit_dispatched.get(),
+            self.quit_confirmed.get(),
+            unsafe { WaitForSingleObject(self.process.as_raw_handle(), 0) } == WAIT_OBJECT_0,
+        )
     }
     pub(super) fn wait_exit(&self) -> Result<()> {
         if unsafe { WaitForSingleObject(self.process.as_raw_handle(), 5000) } != WAIT_OBJECT_0 {

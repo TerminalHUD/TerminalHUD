@@ -1,6 +1,7 @@
 //! Bounded observations describe disturbance; they cannot prove absence of input.
 mod classify;
 pub(crate) mod decision;
+pub(crate) mod full;
 pub(crate) use classify::classify;
 #[cfg(test)]
 mod tests;

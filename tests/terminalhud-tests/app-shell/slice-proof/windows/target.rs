@@ -8,7 +8,9 @@ use std::{
 };
 use terminalhud_windows_terminal::{Guid, LaunchIdentity, SessionProof, native};
 use windows_sys::Win32::{
-    Foundation::WAIT_TIMEOUT, System::Threading::*, UI::WindowsAndMessaging::*,
+    Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT},
+    System::Threading::*,
+    UI::WindowsAndMessaging::*,
 };
 pub(super) struct Session {
     bridge: OwnedHandle,
@@ -120,6 +122,44 @@ impl Launched {
             result.shell_pid, result.session_id
         );
         Ok(result)
+    }
+    pub(super) fn retain(&self) -> Result<Self> {
+        super::active::ensure(self)?;
+        Ok(Self {
+            session: Session {
+                bridge: self.session.bridge.try_clone()?,
+            },
+            hwnd: self.hwnd,
+            pid: self.pid,
+            tid: self.tid,
+            owner: self.owner.try_clone()?,
+            original_style: self.original_style,
+            original_visible: self.original_visible,
+            shell_pid: self.shell_pid,
+            session_id: self.session_id.clone(),
+            nonce: self.nonce.clone(),
+        })
+    }
+    pub(super) fn epoch(&self, generation: u8, profile: &Guid) -> Result<serde_json::Value> {
+        super::active::ensure(self)?;
+        let mut value = super::startup_identity::process_json(self.owner.as_raw_handle())?;
+        value["generation"] = generation.into();
+        value["hwnd"] = self.hwnd.into();
+        value["tid"] = self.tid.into();
+        value["nonce"] = self.nonce.to_string().into();
+        value["profile"] = profile.to_string().into();
+        value["session"] = self.session_id.clone().into();
+        value["bridge"] =
+            super::startup_identity::process_json(self.session.bridge.as_raw_handle())?;
+        value["powershell"] = serde_json::Value::Null;
+        Ok(value)
+    }
+    pub(super) fn closed(&self) -> bool {
+        unsafe {
+            IsWindow(self.hwnd as _) == 0
+                && WaitForSingleObject(self.owner.as_raw_handle(), 0) == WAIT_OBJECT_0
+                && WaitForSingleObject(self.session.bridge.as_raw_handle(), 0) == WAIT_OBJECT_0
+        }
     }
     pub(super) fn restored(&self) -> Result<()> {
         super::active::ensure(self)?;

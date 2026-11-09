@@ -9,6 +9,7 @@ use crate::observation::{
     Stage,
     decision::{self, Fixture},
 };
+pub(super) use state::sink_identity;
 use std::{collections::HashSet, path::Path};
 use terminalhud_core::integration::State;
 use terminalhud_windows_terminal::{Guid, native};
