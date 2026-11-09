@@ -42,7 +42,8 @@ read settings files, register shortcuts, apply preferences, or reload the runtim
 
 `version` is required and must be the integer `1`. All other properties and
 sections may be omitted; each missing property takes the example's default.
-`null` is not omission. Unknown properties, duplicate properties, wrong types,
+The document and every section must be JSON objects; positional arrays are
+unsupported. `null` is not omission. Unknown properties, duplicate properties, wrong types,
 trailing data and unsupported versions are errors, including within sections.
 Syntax/type errors include JSON location/property context; semantic errors name
 the relevant property. JSON comments are unsupported.

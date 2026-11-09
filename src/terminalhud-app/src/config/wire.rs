@@ -4,15 +4,15 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(super) struct Document {
     pub version: u64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "super::object::deserialize_object")]
     pub hotkeys: Hotkeys,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "super::object::deserialize_object")]
     pub startup: Startup,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "super::object::deserialize_object")]
     pub display: Display,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "super::object::deserialize_object")]
     pub terminal: Terminal,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "super::object::deserialize_object")]
     pub lifecycle: Lifecycle,
 }
 

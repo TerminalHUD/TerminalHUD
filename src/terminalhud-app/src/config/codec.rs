@@ -1,4 +1,4 @@
-use super::{policy, wire::*};
+use super::{object::Object, policy, wire::*};
 use terminalhud_core::config::{
     Candidate, Configuration, ProfileId, ProfileSelection, ValidationError,
 };
@@ -6,7 +6,7 @@ use terminalhud_core::config::{
 /// Parse and validate a complete candidate without modifying existing state.
 pub fn decode(json: &str) -> Result<Configuration, ValidationError> {
     let mut deserializer = serde_json::Deserializer::from_str(json);
-    let document: Document = serde_path_to_error::deserialize(&mut deserializer)
+    let Object(document): Object<Document> = serde_path_to_error::deserialize(&mut deserializer)
         .map_err(|error| ValidationError::new("JSON", error.to_string()))?;
     deserializer
         .end()
