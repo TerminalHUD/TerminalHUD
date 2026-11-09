@@ -44,6 +44,8 @@ impl Target {
 }
 impl Drop for Target {
     fn drop(&mut self) {
-        let _ = self.remove_own_marker();
+        if !self.recovery_enrolled {
+            let _ = self.remove_own_marker();
+        }
     }
 }

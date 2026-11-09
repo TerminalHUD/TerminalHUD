@@ -139,3 +139,27 @@ behavior, automatic lifecycle notifications, or crash/watchdog recovery. UIPI
 failures remain explicit; no elevation is requested automatically. A process crash
 can leave owned styles on an external target until recovery is designed and
 validated; normal explicit quit restoration is the path covered here.
+
+## Independent crash recovery
+
+The Windows backend can enroll a claimed window with an independent watcher
+before applying presentation styles. The claim contains the original extended
+style and visibility, HWND, process and thread IDs, and the acquisition token.
+The watcher retains the target process handle and the property atom and checks
+the exact process, thread, root window and token again before recovery. It
+restores only the backend-controlled `WS_EX_TRANSPARENT` and `WS_EX_LAYERED`
+bits, preserving other extended styles and layered attributes. A successful
+normal restore removes the claim; a watcher observing that missing claim does
+nothing. A failed input-style or attempted visibility/topmost restore leaves
+the claim in place and is reported.
+
+The development session bridge enrolls through a per-session, user-restricted
+named pipe. Both ends check the peer process ID against the retained bridge or
+GUI identity before acknowledging the claim. On GUI exit the bridge attempts
+recovery without terminating the terminal or activating its window. It also
+attempts to restore visibility and topmost state, but those operations are
+asynchronous and may race pending window requests; they are not a verified
+crash guarantee. Loss of the bridge itself, an unresponsive target, and a
+simultaneous failure of both processes remain limitations. The installed
+production bridge has not yet been wired to this contract; this development
+integration alone does not complete the MVP recovery requirement.
