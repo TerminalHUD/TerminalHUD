@@ -9,7 +9,7 @@ use super::{
     read::read,
     write::write,
 };
-use crate::protocol::{self, REQUEST_LEN, ReplyCode};
+use crate::protocol::{self, REQUEST_LEN, ReplyCode, Request};
 use std::{
     io,
     sync::mpsc,
@@ -33,10 +33,15 @@ pub(super) fn handle_connection(
         Err(error) => return Err(io::Error::new(io::ErrorKind::InvalidData, error)),
     };
     let (sender, receiver) = mpsc::sync_channel(1);
-    ui.send(UiMessage::Request {
-        command,
-        reply: Some(sender),
-    })?;
+    match command {
+        Request::Command(command) => ui.send(UiMessage::Request {
+            command,
+            reply: Some(sender),
+        })?,
+        Request::ReloadConfiguration => ui.send(UiMessage::ReloadConfiguration {
+            reply: Some(sender),
+        })?,
+    }
     let deadline = Instant::now()
         + if mode == crate::mode::Mode::Real {
             Duration::from_secs(20)
@@ -64,7 +69,7 @@ pub(super) fn handle_connection(
             Err(_) => {}
         }
     };
-    let quitting = command == Command::Quit && reply.code == ReplyCode::Ok;
+    let quitting = command == Request::Command(Command::Quit) && reply.code == ReplyCode::Ok;
     let result = write(pipe.raw(), &reply.encode(), Some(stop.raw())).and_then(|()| {
         // DisconnectNamedPipe discards unread bytes. A bounded client ACK proves
         // consumption without an unbounded synchronous FlushFileBuffers call.

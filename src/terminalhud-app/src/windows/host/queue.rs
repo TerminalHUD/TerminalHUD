@@ -14,6 +14,11 @@ pub enum UiMessage {
         command: Command,
         reply: Option<mpsc::SyncSender<Reply>>,
     },
+    OpenConfiguration,
+    ValidateConfiguration,
+    ReloadConfiguration {
+        reply: Option<mpsc::SyncSender<Reply>>,
+    },
     QuitReplyWritten,
 }
 

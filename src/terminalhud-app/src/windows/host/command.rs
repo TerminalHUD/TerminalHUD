@@ -16,6 +16,14 @@ impl HostContext {
         }
         let code = if self.quitting.get() {
             ReplyCode::ShuttingDown
+        } else if self.requires_configuration
+            && !self.launch_ready.get()
+            && matches!(
+                command,
+                Command::InteractionToggle | Command::VisibilityToggle
+            )
+        {
+            ReplyCode::TransitionFailed
         } else {
             // Arm the fallback before accepting an IPC quit; no successful quit
             // can strand an event loop if the reply worker subsequently fails.
@@ -30,7 +38,8 @@ impl HostContext {
                 }
                 let outcome = if command == Command::Status
                     && (self.observation_error.borrow().is_some()
-                        || self.last_command_error.borrow().is_some())
+                        || self.last_command_error.borrow().is_some()
+                        || self.configuration_error.borrow().is_some())
                 {
                     Err("native observation failed; status is unconfirmed or recovered".into())
                 } else {
@@ -60,7 +69,19 @@ impl HostContext {
                 }
             }
         };
-        let response = Reply {
+        let response = self.reply(code, warning);
+        if let Some(sender) = reply {
+            let _ = sender.send(response);
+        }
+        if self.quitting.get() && menu {
+            unsafe {
+                EndMenu();
+                PostQuitMessage(0);
+            }
+        }
+    }
+    pub(super) fn reply(&self, code: ReplyCode, warning: bool) -> Reply {
+        Reply {
             code,
             mode: self.mode,
             hotkey_error: self.hotkey_error.get(),
@@ -71,15 +92,6 @@ impl HostContext {
             process_id: unsafe { GetCurrentProcessId() },
             host_console: !unsafe { windows_sys::Win32::System::Console::GetConsoleWindow() }
                 .is_null(),
-        };
-        if let Some(sender) = reply {
-            let _ = sender.send(response);
-        }
-        if self.quitting.get() && menu {
-            unsafe {
-                EndMenu();
-                PostQuitMessage(0);
-            }
         }
     }
 }

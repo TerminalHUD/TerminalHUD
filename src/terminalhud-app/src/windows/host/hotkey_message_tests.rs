@@ -8,6 +8,7 @@ fn thread_hotkeys_enqueue_once_only_when_removed_and_stop_after_unhook() {
     unsafe {
         PeekMessageW(&mut message, ptr::null_mut(), 0, 0, PM_NOREMOVE);
     }
+    hotkeys::set_test_actions(vec![(0x5448, terminalhud_core::Command::InteractionToggle)]);
     let (sender, receiver) = mpsc::sync_channel(4);
     let hook = HotkeyMessages::install(UiSender::new(sender, 0)).unwrap();
     let thread = unsafe { GetCurrentThreadId() };
@@ -66,6 +67,7 @@ fn thread_hotkeys_enqueue_once_only_when_removed_and_stop_after_unhook() {
     assert_eq!(message.message, WM_HOTKEY);
     assert!(receiver.try_recv().is_err());
     drop(hook);
+    hotkeys::set_test_actions(Vec::new());
     assert_ne!(
         unsafe { PostThreadMessageW(thread, WM_HOTKEY, 0x5448, 0) },
         0

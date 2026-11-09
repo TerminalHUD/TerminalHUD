@@ -36,7 +36,14 @@ pub fn run_host(options: HostOptions) -> io::Result<()> {
     };
     let (sender, queue) = mpsc::sync_channel(64);
     let controller = RuntimeController::new(&options)?;
-    let context = Box::new(HostContext::new(queue, controller, options.mode));
+    let production = options.mode == Mode::Real && options.development.is_none();
+    let context = Box::new(HostContext::new(
+        queue,
+        controller,
+        options.mode,
+        None,
+        production,
+    ));
     let window = HostWindow::create(&context)?;
     context.window.set(window.0);
     context.menu_probe.set(options.menu_probe);
@@ -46,13 +53,13 @@ pub fn run_host(options: HostOptions) -> io::Result<()> {
     } else {
         None
     };
-    let hotkeys = if options.mode == Mode::Real {
+    if options.mode == Mode::Real && options.development.is_some() {
         let (keys, error) = hotkeys::register();
         context.hotkey_error.set(error);
-        keys
-    } else {
-        None
-    };
+        *context.hotkeys.borrow_mut() = Some(keys);
+    } else if options.mode == Mode::Real {
+        *context.hotkeys.borrow_mut() = Some(hotkeys::Registrations::new());
+    }
     if !options.headless {
         *context.tray.borrow_mut() = Some(tray_for_mode(
             ui.clone(),
@@ -62,7 +69,9 @@ pub fn run_host(options: HostOptions) -> io::Result<()> {
     }
     window.configure_timers(&options)?;
     server.start(identity, ui.clone(), options.mode)?;
-    if options.mode == Mode::Real {
+    if options.mode == Mode::Real
+        && (options.development.is_some() || context.initialize_configuration())
+    {
         context.initialize_real();
     }
     // Readiness is serviced only after the UI/tray/controller has been initialized.
@@ -74,7 +83,7 @@ pub fn run_host(options: HostOptions) -> io::Result<()> {
     }
     // Workers are cancelled/joined before removing their wake target. The server
     // retains its first-instance pipe handle until after the icon/window disappear.
-    drop(hotkeys);
+    drop(context.hotkeys.borrow_mut().take());
     drop(hotkey_messages);
     ui.stop();
     server.stop();
