@@ -179,8 +179,9 @@ isolated Terminal 1.24.12741.0 runtime confirmed fresh startup Active: the windo
 was visible, topmost, interactive and foreground. A genuine tray **Toggle
 interaction** action also produced native-confirmed Active, with the same target
 session and an incremented menu counter. Returning to another application made
-it Passive. Opening Windows Start also made it Passive, as required by the
-unexpected-focus-loss policy; closing Start does not automatically reactivate it.
+it Passive. The user also observed that opening Windows Start made it Passive.
+This matches the unexpected-focus-loss policy; closing Start does not
+automatically reactivate it.
 
 Real IPC confirmed same-session Passive → Hidden (remembering Passive) → Passive,
 with native visibility and the existing foreground preserved. Closing the exact
@@ -202,8 +203,9 @@ found the known test objects gone, the unrelated Terminal witness unchanged,
 and ordinary settings/fragment baselines unchanged.
 
 The full automated `app-slice-proof` has **not passed**. In its owned-sink setup,
-initial native Present timed out because TOPMOST never became true within the
-unchanged 500 ms backend budget, despite successful positioning API returns.
+initial native Present timed out after the unchanged 500 ms backend budget.
+TOPMOST was false in the final completed poll, despite successful positioning
+API returns.
 Separate guarded observations found the target visible; this is not evidence of
 rendering loss. The cause remains unproven. Temporary failure-only diagnostics
 were isolated from the public binaries; they changed no presentation ordering,
@@ -214,8 +216,7 @@ The selected hotkeys reported registration error 1409 on this desktop. Their
 bindings stayed unchanged, tray/IPC remained usable, and physical shortcut
 operation was not demonstrated. A human also reported a loading pointer over
 the test Terminal; its duration and cause were not measured. The retained
-synthetic fixture reported Consolas 16 pt at window DPI 192; no user font or DPI
-settings were changed. These observations establish no installed-profile,
+synthetic profile used Consolas 16 pt; no user font or DPI settings were changed. These observations establish no installed-profile,
 Preview, full-profile-cloning, login/startup, installation, shell Escape or
 release-readiness claim.
 
