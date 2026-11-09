@@ -8,6 +8,15 @@ pub use configuration::ConfigCommand;
 mod startup;
 pub use arguments::{Action, Arguments, USAGE, parse};
 
+/// Return the installed bridge's full native exit status when invoked as the
+/// Terminal child. The console entry point passes it directly to Windows.
+#[cfg(windows)]
+pub fn installed_bridge_exit(args: &[String]) -> Option<Result<u32, String>> {
+    args.first()
+        .filter(|arg| *arg == "--installed-session-bridge")?;
+    Some(crate::windows::installed::run_bridge(&args[1..]))
+}
+
 pub fn run(args: Vec<String>) -> Result<String, String> {
     run_with_config(args, configuration::run)
 }
@@ -17,14 +26,6 @@ fn run_with_config(
     local: impl FnOnce(ConfigCommand) -> Result<String, String>,
 ) -> Result<String, String> {
     #[cfg(windows)]
-    if args
-        .first()
-        .is_some_and(|arg| arg == "--installed-session-bridge")
-    {
-        crate::windows::installed::run_bridge(&args[1..])?;
-        return Ok(String::new());
-    }
-    #[cfg(windows)]
     if args.first().is_some_and(|arg| arg == "--session-bridge") {
         crate::windows::development::run_bridge(&args[1..])?;
         return Ok(String::new());
@@ -33,10 +34,18 @@ fn run_with_config(
     if args.action == Action::Help {
         return Ok(USAGE.into());
     }
-    if matches!(args.action, Action::ProfilePlan | Action::ProfileApply) {
+    if matches!(
+        args.action,
+        Action::ProfilePlan
+            | Action::ProfilePlanDetails
+            | Action::ProfileApply
+            | Action::ProfileRemovePlan
+            | Action::ProfileRemovePlanDetails
+            | Action::ProfileRemove
+    ) {
         #[cfg(windows)]
         {
-            return crate::windows::installed::profile_command(args.action == Action::ProfileApply);
+            return crate::windows::installed::profile_command(args.action);
         }
         #[cfg(not(windows))]
         {
@@ -84,7 +93,14 @@ fn runtime_reply(
         Action::Run => start(args),
         Action::ReloadConfiguration => send(&args.instance, Request::ReloadConfiguration),
         Action::Command(command) => send(&args.instance, Request::Command(command)),
-        Action::Help | Action::Config(_) | Action::ProfilePlan | Action::ProfileApply => {
+        Action::Help
+        | Action::Config(_)
+        | Action::ProfilePlan
+        | Action::ProfilePlanDetails
+        | Action::ProfileApply
+        | Action::ProfileRemovePlan
+        | Action::ProfileRemovePlanDetails
+        | Action::ProfileRemove => {
             unreachable!()
         }
     }

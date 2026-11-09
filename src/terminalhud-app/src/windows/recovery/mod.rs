@@ -3,8 +3,8 @@ use super::ipc::{accept, read, write};
 mod client;
 mod server;
 const IO_TIMEOUT: u32 = 1500;
-pub(super) use client::enroll;
-pub(super) use server::start;
+pub(super) use client::{completion, enroll, enroll_session, release};
+pub(super) use server::{start, start_session};
 
 fn creation_time(process: windows_sys::Win32::Foundation::HANDLE) -> std::io::Result<u64> {
     use windows_sys::Win32::{Foundation::FILETIME, System::Threading::GetProcessTimes};
@@ -23,3 +23,6 @@ fn creation_time(process: windows_sys::Win32::Foundation::HANDLE) -> std::io::Re
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod session_tests;

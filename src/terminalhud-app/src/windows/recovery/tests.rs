@@ -23,13 +23,13 @@ use windows_sys::Win32::{
 const INPUT_BITS: u32 = WS_EX_LAYERED | WS_EX_TRANSPARENT;
 static NEXT: AtomicUsize = AtomicUsize::new(1);
 
-struct HiddenWindow {
-    hwnd: HWND,
+pub(super) struct HiddenWindow {
+    pub(super) hwnd: HWND,
     class: Vec<u16>,
     instance: HINSTANCE,
 }
 impl HiddenWindow {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         let class: Vec<u16> = format!(
             "TerminalHUD.RecoveryFixture.{}.{}\0",
             std::process::id(),
@@ -78,7 +78,7 @@ impl Drop for HiddenWindow {
         }
     }
 }
-struct OwnedChild(Child);
+pub(super) struct OwnedChild(pub(super) Child);
 impl Drop for OwnedChild {
     fn drop(&mut self) {
         if self.0.try_wait().ok().flatten().is_none() {
@@ -87,7 +87,7 @@ impl Drop for OwnedChild {
         }
     }
 }
-fn open_process(pid: u32) -> OwnedHandle {
+pub(super) fn open_process(pid: u32) -> OwnedHandle {
     let raw = unsafe {
         OpenProcess(
             PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
@@ -224,7 +224,7 @@ fn owner_death_recovers_hidden_window() {
 }
 
 // Dispatch only messages for the hidden owned fixture; no desktop input is sent.
-fn pump_hidden(hwnd: HWND) {
+pub(super) fn pump_hidden(hwnd: HWND) {
     let mut message: MSG = unsafe { std::mem::zeroed() };
     while unsafe { PeekMessageW(&mut message, hwnd, 0, 0, PM_REMOVE) } != 0 {
         unsafe {

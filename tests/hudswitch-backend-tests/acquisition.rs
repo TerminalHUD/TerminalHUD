@@ -217,3 +217,76 @@ fn zero_token_cannot_claim_an_unmarked_window() {
     ));
     assert_eq!(exstyle(window.hwnd).unwrap(), before);
 }
+
+#[test]
+fn release_confirmation_requires_original_input_bits_and_no_marker() {
+    let window = HiddenWindow::new();
+    let claim = std::rc::Rc::new(std::cell::RefCell::new(None));
+    let mut backend = WindowsBackend::new(EnrolledLauncher {
+        receipt: Some(window.receipt()),
+        claim: claim.clone(),
+    })
+    .unwrap();
+    let acquired = backend.acquire(VisibleState::Active).unwrap();
+    let watch = RecoveryWatch::open(claim.borrow().unwrap()).unwrap();
+    assert!(!watch.confirm_released().unwrap());
+    set_style(&acquired.target, LAYER_BITS, LAYER_BITS).unwrap();
+    unsafe {
+        RemovePropW(window.hwnd, backend.atom.key());
+    }
+    assert!(!watch.confirm_released().unwrap());
+    // Restore the marker only in this owned fixture so normal cleanup can run.
+    assert_ne!(
+        unsafe {
+            SetPropW(
+                window.hwnd,
+                backend.atom.key(),
+                acquired.target.token as HANDLE,
+            )
+        },
+        0
+    );
+    backend
+        .restore_original(&acquired.target, &acquired.original)
+        .unwrap();
+    assert!(watch.confirm_released().unwrap());
+}
+
+#[test]
+fn release_confirmation_rejects_foreign_or_uncertain_identity_and_accepts_gone_target() {
+    let window = HiddenWindow::new();
+    let parent = HiddenWindow::new();
+    let claim = std::rc::Rc::new(std::cell::RefCell::new(None));
+    let mut backend = WindowsBackend::new(EnrolledLauncher {
+        receipt: Some(window.receipt()),
+        claim: claim.clone(),
+    })
+    .unwrap();
+    let acquired = backend.acquire(VisibleState::Active).unwrap();
+    let watch = RecoveryWatch::open(claim.borrow().unwrap()).unwrap();
+    let foreign = acquired.target.token ^ 1;
+    assert_ne!(
+        unsafe { SetPropW(window.hwnd, backend.atom.key(), foreign as HANDLE) },
+        0
+    );
+    assert!(!watch.confirm_released().unwrap());
+    assert_ne!(
+        unsafe {
+            SetPropW(
+                window.hwnd,
+                backend.atom.key(),
+                acquired.target.token as HANDLE,
+            )
+        },
+        0
+    );
+    unsafe {
+        SetParent(window.hwnd, parent.hwnd);
+    }
+    assert!(watch.confirm_released().is_err());
+    unsafe {
+        SetParent(window.hwnd, null_mut());
+    }
+    drop(window);
+    assert!(watch.confirm_released().unwrap());
+}

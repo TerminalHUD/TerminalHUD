@@ -44,7 +44,7 @@ fn receipt(
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok((None, None)),
         Err(error) => return Err(error),
     };
-    if raw.len() > 1024 * 1024 {
+    if raw.len() > sources::MAX_BYTES {
         return Err(io::Error::other("profile ownership receipt exceeds limit"));
     }
     let value: serde_json::Value = serde_json::from_slice(&raw).map_err(io::Error::other)?;
@@ -109,14 +109,39 @@ fn prepare_from(
         .map_err(io::Error::other)?;
     let patch = plan_profile_patch(&settings, &profile.owned_profile, owned.as_ref())
         .map_err(io::Error::other)?;
-    Ok(Plan {
+    let plan = Plan {
         sources,
         profile,
         patch,
         previous_receipt,
-    })
+    };
+    plan.validate_size()?;
+    Ok(plan)
 }
 impl Plan {
+    fn receipt_bytes(&self, backup: &Path) -> io::Result<Vec<u8>> {
+        let receipt = serde_json::json!({"schema":1,"settings":self.sources.settings,"source":self.profile.source_guid.as_str(),"ownership":self.patch.ownership.to_json(),"backup":backup});
+        serde_json::to_vec(&receipt).map_err(io::Error::other)
+    }
+    fn validate_size(&self) -> io::Result<()> {
+        if self.patch.updated.len() > sources::MAX_BYTES {
+            return Err(io::Error::other(
+                "proposed Terminal settings exceed the 1 MiB limit",
+            ));
+        }
+        let parent = self
+            .sources
+            .settings
+            .parent()
+            .ok_or_else(|| io::Error::other("Terminal settings parent missing"))?;
+        let backup = parent.join("settings.terminalhud-00000000-0000-0000-0000-000000000000.bak");
+        if self.receipt_bytes(&backup)?.len() > sources::MAX_BYTES {
+            return Err(io::Error::other(
+                "proposed profile ownership receipt exceeds the 1 MiB limit",
+            ));
+        }
+        Ok(())
+    }
     pub fn commit(&self) -> io::Result<()> {
         let local = &self.sources.local_app_data;
         let directory = local.join("TerminalHUD");
@@ -148,8 +173,7 @@ impl Plan {
             .ok_or_else(|| io::Error::other("Terminal settings parent missing"))?;
         let staged = parent.join(format!(".terminalhud-{token}.staged"));
         let backup = parent.join(format!("settings.terminalhud-{token}.bak"));
-        let receipt = serde_json::json!({"schema":1,"settings":self.sources.settings,"source":self.profile.source_guid.as_str(),"ownership":self.patch.ownership.to_json(),"backup":backup});
-        let bytes = serde_json::to_vec(&receipt).map_err(io::Error::other)?;
+        let bytes = self.receipt_bytes(&backup)?;
         transaction::apply(transaction::Plan {
             settings: &self.sources.settings,
             expected: self.patch.original.as_bytes(),
@@ -160,7 +184,30 @@ impl Plan {
             receipt: &receipt_path(local),
             expected_receipt: self.previous_receipt.as_deref(),
             new_receipt: &bytes,
+            remove_receipt: false,
         })
+    }
+    pub fn summary(&self, details: bool) -> String {
+        let source = self.profile.owned_profile["name"]
+            .as_str()
+            .unwrap_or("unknown")
+            .strip_prefix("HUD — ")
+            .unwrap_or("unknown");
+        let mut text = format!(
+            "Windows Terminal ({:?}): {}\nSettings: {}\nSource profile: {} ({})\n{} TerminalHUD-owned profile: {}\nHUD overrides: independent profile identity/name; hidden and elevation off; source/update links removed; active opacity and acrylic off; unfocused opacity, acrylic and background image opacity zero.\nAll ordinary settings bytes are preserved. Apply stages a replacement with an exact backup beside settings and a local ownership receipt.",
+            self.sources.channel,
+            clean(&self.sources.executable.to_string_lossy()),
+            clean(&self.sources.settings.to_string_lossy()),
+            clean(source),
+            self.profile.source_guid,
+            if self.is_owned() { "Update" } else { "Add" },
+            self.profile.hud_guid
+        );
+        if details {
+            text.push_str("\n\nOwned entry (may contain private profile values):\n");
+            text.push_str(&self.patch.ownership.block);
+        }
+        text
     }
     pub fn is_owned(&self) -> bool {
         self.previous_receipt.is_some()
@@ -169,3 +216,107 @@ impl Plan {
 
 #[cfg(test)]
 mod tests;
+
+fn clean(value: &str) -> String {
+    value.chars().filter(|c| !c.is_control() && !matches!(*c, '\u{200e}'..='\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')).take(512).collect()
+}
+
+pub(super) struct RemovalPlan {
+    sources: Sources,
+    original: String,
+    updated: String,
+    previous_receipt: Vec<u8>,
+    owned: OwnedProfileEntry,
+}
+pub(super) fn prepare_removal() -> io::Result<RemovalPlan> {
+    prepare_removal_from(Sources::base()?)
+}
+fn prepare_removal_from(sources: Sources) -> io::Result<RemovalPlan> {
+    match fs::symlink_metadata(pending_path(&sources.local_app_data)) {
+        Ok(_) => {
+            return Err(io::Error::other(
+                "previous Terminal profile update needs recovery; preserve its backup and pending receipt",
+            ));
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error),
+    }
+    let (previous_receipt, owned) =
+        receipt(&receipt_path(&sources.local_app_data), &sources.settings)?;
+    let previous_receipt = previous_receipt
+        .ok_or_else(|| io::Error::other("no TerminalHUD-owned profile receipt found"))?;
+    let owned = owned.ok_or_else(|| io::Error::other("no TerminalHUD-owned profile found"))?;
+    let original = sources::read(&sources.settings)?;
+    let updated = remove_owned_profile(&original, &owned).map_err(io::Error::other)?;
+    if updated.len() > sources::MAX_BYTES {
+        return Err(io::Error::other(
+            "proposed Terminal settings exceed the 1 MiB limit",
+        ));
+    }
+    let plan = RemovalPlan {
+        sources,
+        original,
+        updated,
+        previous_receipt,
+        owned,
+    };
+    let parent = plan
+        .sources
+        .settings
+        .parent()
+        .ok_or_else(|| io::Error::other("Terminal settings parent missing"))?;
+    let backup = parent.join("settings.terminalhud-00000000-0000-0000-0000-000000000000.bak");
+    if plan.journal_bytes(&backup)?.len() > sources::MAX_BYTES {
+        return Err(io::Error::other(
+            "proposed removal journal exceeds the 1 MiB limit",
+        ));
+    }
+    Ok(plan)
+}
+impl RemovalPlan {
+    fn journal_bytes(&self, backup: &Path) -> io::Result<Vec<u8>> {
+        let journal = serde_json::json!({"schema":1,"operation":"remove","settings":self.sources.settings,"ownership":self.owned.to_json(),"backup":backup});
+        serde_json::to_vec(&journal).map_err(io::Error::other)
+    }
+    pub fn summary(&self, details: bool) -> String {
+        let mut text = format!(
+            "Windows Terminal ({:?}): {}\nSettings: {}\nRemove TerminalHUD-owned profile: {}\nAll ordinary settings bytes are preserved. Removal stages a replacement with an exact backup beside settings and removes the matching receipt; live sessions are not closed.",
+            self.sources.channel,
+            clean(&self.sources.executable.to_string_lossy()),
+            clean(&self.sources.settings.to_string_lossy()),
+            self.owned.guid
+        );
+        if details {
+            text.push_str("\n\nOwned entry to remove (may contain private profile values):\n");
+            text.push_str(&self.owned.block);
+        }
+        text
+    }
+    pub fn commit(&self) -> io::Result<()> {
+        let local = &self.sources.local_app_data;
+        let token = native::fresh_guid()
+            .map_err(io::Error::other)?
+            .bare()
+            .to_owned();
+        let parent = self
+            .sources
+            .settings
+            .parent()
+            .ok_or_else(|| io::Error::other("Terminal settings parent missing"))?;
+        let staged = parent.join(format!(".terminalhud-{token}.staged"));
+        let backup = parent.join(format!("settings.terminalhud-{token}.bak"));
+        let bytes = self.journal_bytes(&backup)?;
+        transaction::apply(transaction::Plan {
+            settings: &self.sources.settings,
+            expected: self.original.as_bytes(),
+            updated: self.updated.as_bytes(),
+            staged: &staged,
+            backup: &backup,
+            journal: &pending_path(local),
+            receipt: &receipt_path(local),
+            expected_receipt: Some(&self.previous_receipt),
+            new_receipt: &bytes,
+            remove_receipt: true,
+        })
+    }
+}

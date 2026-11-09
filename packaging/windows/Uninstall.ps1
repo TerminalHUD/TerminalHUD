@@ -1,3 +1,10 @@
+function Test-ProfileCleanupRequired([string] $Root) {
+    $local = Split-Path -Parent $Root
+    foreach ($name in @('terminal-profile-receipt.json', 'terminal-profile-pending.json', 'terminal-profile-receipt.lock')) {
+        if (Test-Path -LiteralPath (Join-Path $local $name)) { return $true }
+    }
+    return $false
+}
 function New-UninstallPlan([string] $Root, [scriptblock] $ReadStartup) {
     $receipt = Read-Receipt $Root
     if ($null -eq $receipt) { throw 'No installation receipt' }
@@ -6,12 +13,14 @@ function New-UninstallPlan([string] $Root, [scriptblock] $ReadStartup) {
     Assert-OwnedStartup $startup $receipt
     return [pscustomobject]@{
         operation = 'uninstall'; root = $Root; startup = $startup; pending_cleanup = $true; shortcut = Get-ShortcutPath; shortcut_sha256 = $shortcutHash
+        profile_cleanup_required = (Test-ProfileCleanupRequired $Root)
         preserved_versions = @($receipt.versions | ForEach-Object { $_.build_id })
         reason = 'Preserved for live terminal sessions. Cleanup requires explicit confirmation that sessions are closed.'
     }
 }
 function Invoke-Uninstall([string] $Root, [scriptblock] $ReadStartup, [scriptblock] $RemoveStartup) {
     $plan = New-UninstallPlan $Root $ReadStartup
+    if ($plan.profile_cleanup_required) { throw 'Review and remove the owned Terminal profile before uninstall: terminalhud profiles remove-plan, then profiles remove. Preserve any pending journal and backup.' }
     try {
         & $RemoveStartup $plan.startup
         $receipt = Read-Receipt $Root
@@ -23,6 +32,7 @@ function Invoke-Uninstall([string] $Root, [scriptblock] $ReadStartup, [scriptblo
     return $plan
 }
 function New-CleanupPlan([string] $Root) {
+    if (Test-ProfileCleanupRequired $Root) { throw 'Owned Terminal profile or pending transaction remains; preserve installed CLI and review profile removal first' }
     $receipt = Read-Receipt $Root
     if ($null -eq $receipt -or $receipt.installed) { throw 'Uninstall before cleanup' }
     $remove = @(); $preserve = @()

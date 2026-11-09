@@ -2,7 +2,7 @@ use crate::mode::{Mode, REAL_INSTANCE};
 use std::path::PathBuf;
 use terminalhud_core::Command;
 pub const USAGE: &str = "Usage: terminalhud [--development MANIFEST | --prototype [--instance NAME]] run|status|interaction-toggle|visibility-toggle|passive|quit\n       terminalhud config path|validate|open|reload
-       terminalhud profiles plan|apply";
+       terminalhud profiles plan [--details]|apply|remove-plan [--details]|remove";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
     Help,
@@ -11,7 +11,11 @@ pub enum Action {
     Config(super::configuration::ConfigCommand),
     ReloadConfiguration,
     ProfilePlan,
+    ProfilePlanDetails,
     ProfileApply,
+    ProfileRemovePlan,
+    ProfileRemovePlanDetails,
+    ProfileRemove,
 }
 pub struct Arguments {
     pub instance: String,
@@ -32,8 +36,16 @@ pub fn parse(mut args: Vec<String>) -> Result<Arguments, String> {
     if args.first().is_some_and(|a| a == "profiles") {
         result.action = match args.as_slice() {
             [_, operation] if operation == "plan" => Action::ProfilePlan,
+            [_, operation, flag] if operation == "plan" && flag == "--details" => {
+                Action::ProfilePlanDetails
+            }
             [_, operation] if operation == "apply" => Action::ProfileApply,
-            _ => return Err("expected profiles plan or profiles apply".into()),
+            [_, operation] if operation == "remove-plan" => Action::ProfileRemovePlan,
+            [_, operation, flag] if operation == "remove-plan" && flag == "--details" => {
+                Action::ProfileRemovePlanDetails
+            }
+            [_, operation] if operation == "remove" => Action::ProfileRemove,
+            _ => return Err("expected profiles plan, apply, remove-plan or remove".into()),
         };
         return Ok(result);
     }

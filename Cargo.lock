@@ -1518,6 +1518,7 @@ dependencies = [
  "terminalhud-core",
  "terminalhud-windows-terminal",
  "tray-icon",
+ "windows",
  "windows-sys 0.61.2",
 ]
 

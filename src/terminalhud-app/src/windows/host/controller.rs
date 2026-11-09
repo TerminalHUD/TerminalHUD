@@ -63,7 +63,16 @@ impl RuntimeController {
         match self {
             Self::Prototype(_) => Ok(()),
             Self::Real(c) => c.refresh().map(|_| ()).map_err(|e| format!("{e:?}")),
-            Self::Installed(c, _) => c.refresh().map(|_| ()).map_err(|e| format!("{e:?}")),
+            Self::Installed(c, shared) => match shared.completion() {
+                Ok(false) => c.refresh().map(|_| ()).map_err(|e| format!("{e:?}")),
+                Ok(true) => retire(c, shared, true),
+                Err(error) => {
+                    retire(c, shared, false)?;
+                    Err(format!(
+                        "session recovery connection lost after restoration: {error}"
+                    ))
+                }
+            },
         }
     }
     pub(super) fn execute(&mut self, command: Command) -> Result<CommandOutcome<String>, String> {
@@ -94,6 +103,28 @@ impl RuntimeController {
                 .map_err(|e| format!("{e:?}")),
         }
     }
+}
+// Called only on the authoritative UI thread: no presentation can overlap
+// the restore and ACK. A new controller reuses the same launch preferences.
+fn retire(
+    controller: &mut Box<ShellController<WindowsBackend<InstalledLauncher>>>,
+    shared: &Shared,
+    acknowledge: bool,
+) -> Result<(), String> {
+    controller
+        .execute(Command::Quit)
+        .map_err(|error| format!("session restoration failed: {error:?}"))?;
+    if acknowledge {
+        shared
+            .release()
+            .map_err(|error| format!("session release acknowledgement failed: {error}"))?;
+    } else {
+        shared.discard();
+    }
+    let backend = WindowsBackend::new(InstalledLauncher::new(shared.clone()))
+        .map_err(|error| format!("cannot reset Terminal controller: {error:?}"))?;
+    **controller = ShellController::new(backend);
+    Ok(())
 }
 #[cfg(test)]
 mod tests {

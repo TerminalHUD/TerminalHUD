@@ -18,14 +18,23 @@ Terminal and may share its owner process with ordinary Terminal windows. The
 selected profile is prepared separately from the prototype. The proposed owned
 profile setup in [ADR 0011](decisions/0011-owned-profile-entries.md) requires
 explicit approval before use on real settings. `terminalhud profiles plan` is
-read-only; `terminalhud profiles apply` writes the receipt-owned entry with a
+read-only; `terminalhud profiles plan --details` shows the owned entry locally
+and may contain private profile values. `terminalhud profiles apply` writes the
+receipt-owned entry with a
 backup and pending journal. A changed or removed owned entry is a conflict.
+Before uninstall, `terminalhud profiles remove-plan` previews removal and
+`terminalhud profiles remove` removes only the unchanged owned entry with a
+backup. A conflict preserves the entry and receipt.
 After setup, a configuration reload can update that entry without closing a live
 session. When the selected launch or appearance changes, the reply reports that
 it takes effect on the next launch.
 
 The bridge checks the profile and session before starting the selected shell and
-keeps recovery available if the tray exits. An already-running Terminal may need
+keeps recovery available if the tray exits. When the shell exits but Terminal
+retains its window, the UI thread restores and releases that window before the
+bridge returns the shell's exit status. The surviving window becomes ordinary;
+the next interaction shortcut creates a new HUD. A failed restore keeps the
+bridge and recovery claim rather than reporting a clean release. An already-running Terminal may need
 to reload settings before recognizing the profile; a failed handshake leaves
 any newly created window unmanaged and does not close other sessions. This path
 still requires native installed-Terminal and shell-preservation validation.

@@ -81,6 +81,24 @@ fn installed_profile_setup_is_explicit() {
             .action,
         Action::ProfileApply
     );
+    assert_eq!(
+        parse(vec!["profiles".into(), "plan".into(), "--details".into()])
+            .unwrap()
+            .action,
+        Action::ProfilePlanDetails
+    );
+    assert_eq!(
+        parse(vec!["profiles".into(), "remove-plan".into()])
+            .unwrap()
+            .action,
+        Action::ProfileRemovePlan
+    );
+    assert_eq!(
+        parse(vec!["profiles".into(), "remove".into()])
+            .unwrap()
+            .action,
+        Action::ProfileRemove
+    );
     assert!(parse(vec!["profiles".into()]).is_err());
     assert!(parse(vec!["profiles".into(), "apply".into(), "extra".into()]).is_err());
 }

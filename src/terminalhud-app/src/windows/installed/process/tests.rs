@@ -40,7 +40,12 @@ fn fixture_parent() {
         "\"{}\" --exact windows::installed::process::tests::fixture_child --ignored --nocapture --skip \"pattern with spaces\"",
         executable.display()
     );
-    start(&command, "").unwrap().wait().unwrap();
+    assert_eq!(start(&command, "").unwrap().wait().unwrap(), 0);
+    let failure = format!(
+        "\"{}\" --exact windows::installed::process::tests::fixture_failure --ignored --nocapture",
+        executable.display()
+    );
+    assert_eq!(start(&failure, "").unwrap().wait().unwrap(), 0xc000_013a);
 }
 #[test]
 #[ignore = "spawned only by the selected-command fixture"]
@@ -53,4 +58,10 @@ fn fixture_child() {
         std::env::var("TER28_FIXTURE_VALUE").unwrap(),
     )
     .unwrap();
+}
+
+#[test]
+#[ignore = "spawned only by the selected-command fixture"]
+fn fixture_failure() {
+    std::process::exit(0xc000_013au32 as i32);
 }

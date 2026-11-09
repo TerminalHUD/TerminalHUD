@@ -33,6 +33,18 @@ try {
     $oversized.startup_commands = @('x' * 1MB)
     Reject { Save-Receipt $root $oversized }
     Assert ([Convert]::ToBase64String($receiptBefore) -ceq [Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $root 'receipt.json')))) 'Oversized receipt replaced existing ownership'
+    $profileReceipt = Join-Path (Split-Path -Parent $root) 'terminal-profile-receipt.json'
+    [IO.File]::WriteAllText($profileReceipt, 'synthetic ownership')
+    $profilePlan = New-UninstallPlan $root { $null }
+    Assert $profilePlan.profile_cleanup_required 'Uninstall plan did not report owned profile'
+    Reject { Invoke-Uninstall $root { $null } { param($expected) throw 'must not remove startup' } }
+    Assert (Test-Path -LiteralPath $profileReceipt) 'Uninstall removed profile receipt'
+    Remove-Item -LiteralPath $profileReceipt
+    $pendingProfile = Join-Path (Split-Path -Parent $root) 'terminal-profile-pending.json'
+    [IO.File]::WriteAllText($pendingProfile, 'synthetic pending transaction')
+    Reject { Invoke-Uninstall $root { $null } { param($expected) throw 'must not remove startup' } }
+    Assert (Test-Path -LiteralPath $pendingProfile) 'Uninstall removed pending transaction'
+    Remove-Item -LiteralPath $pendingProfile
     $oldCli = Join-Path $root 'versions\fixture1\terminalhud.exe'
     $manifest.build_id = 'fixture2'; Write-Manifest
     $shortcutBytes = [IO.File]::ReadAllBytes($script:fixtureShortcut)

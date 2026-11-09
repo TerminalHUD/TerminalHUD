@@ -84,6 +84,35 @@ impl RecoveryWatch {
         })
     }
 
+    /// Confirm that the GUI released its claim and original input bits, or that
+    /// the original target is definitely gone. This method never mutates a window.
+    pub fn confirm_released(&self) -> Result<bool, Error> {
+        match unsafe { WaitForSingleObject(self.target.window.process.as_raw_handle(), 0) } {
+            WAIT_OBJECT_0 => return Ok(true),
+            WAIT_TIMEOUT => {}
+            _ => return Err(last_error("wait for recovery target")),
+        }
+        let hwnd = self.target.window.hwnd;
+        if unsafe { IsWindow(hwnd) } == 0 {
+            return Ok(true);
+        }
+        let mut pid = 0;
+        let tid = unsafe { GetWindowThreadProcessId(hwnd, &mut pid) };
+        if tid == 0 || pid == 0 {
+            return Err(Error::InvalidTarget);
+        }
+        if tid != self.target.window.tid || pid != self.target.window.pid {
+            return Ok(true);
+        }
+        if unsafe { GetAncestor(hwnd, GA_ROOT) } != hwnd {
+            return Err(Error::InvalidTarget);
+        }
+        if !unsafe { GetPropW(hwnd, self.target.atom.key()) }.is_null() {
+            return Ok(false);
+        }
+        Ok(exstyle(hwnd)? & LAYER_BITS == self.original.exstyle & LAYER_BITS)
+    }
+
     /// Restore critical input styles only while the exact claim still exists.
     /// A missing/changed claim is reported as InvalidTarget and never modified.
     pub fn restore(&self) -> Result<(), Error> {

@@ -96,6 +96,7 @@ pub(super) struct Plan<'a> {
     pub receipt: &'a Path,
     pub expected_receipt: Option<&'a [u8]>,
     pub new_receipt: &'a [u8],
+    pub remove_receipt: bool,
 }
 /// Pending journal contains the new receipt and identifies the backup. A crash
 /// or ambiguous replacement requires inspection; no automatic full-file rollback.
@@ -110,7 +111,19 @@ pub(super) fn apply(plan: Plan<'_>) -> io::Result<()> {
         receipt,
         expected_receipt,
         new_receipt,
+        remove_receipt,
     } = plan;
+    if remove_receipt && expected_receipt.is_none() {
+        return Err(io::Error::other("cannot remove an unowned receipt"));
+    }
+    if expected.len() > super::sources::MAX_BYTES
+        || updated.len() > super::sources::MAX_BYTES
+        || new_receipt.len() > super::sources::MAX_BYTES
+    {
+        return Err(io::Error::other(
+            "settings transaction exceeds the 1 MiB limit",
+        ));
+    }
     if settings.parent() != staged.parent() || settings.parent() != backup.parent() {
         return Err(io::Error::other(
             "stage and backup must share the settings directory",
@@ -183,7 +196,12 @@ pub(super) fn apply(plan: Plan<'_>) -> io::Result<()> {
             "settings or receipt changed during apply; preserve backup and pending journal",
         ));
     }
-    fs::rename(journal, receipt).map_err(|error| io::Error::other(format!("settings updated but receipt commit failed: {error}; preserve backup and pending journal")))
+    if remove_receipt {
+        fs::remove_file(receipt).map_err(|error| io::Error::other(format!("settings updated but ownership removal failed: {error}; preserve backup and pending journal")))?;
+        fs::remove_file(journal).map_err(|error| io::Error::other(format!("settings updated but pending journal removal failed: {error}; preserve backup and pending journal")))
+    } else {
+        fs::rename(journal, receipt).map_err(|error| io::Error::other(format!("settings updated but receipt commit failed: {error}; preserve backup and pending journal")))
+    }
 }
 #[cfg(test)]
 thread_local! {

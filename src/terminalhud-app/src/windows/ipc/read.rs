@@ -8,7 +8,7 @@ pub(in crate::windows) fn read(
 ) -> io::Result<usize> {
     read_with_timeout(pipe, buffer, stop, IO_TIMEOUT)
 }
-pub(super) fn read_with_timeout(
+pub(in crate::windows) fn read_with_timeout(
     pipe: HANDLE,
     buffer: &mut [u8],
     stop: Option<HANDLE>,

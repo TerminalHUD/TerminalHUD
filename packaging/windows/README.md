@@ -55,7 +55,10 @@ terminalhud.exe profiles plan
 terminalhud.exe profiles apply
 ```
 
-`plan` reads inputs and reports the intended operation. After review and approval,
+`plan` reads inputs and reports the intended operation without shell commands or
+environment values. `profiles plan --details` additionally prints the exact owned
+entry locally and can contain private profile values; do not publish that output.
+After review and approval,
 `apply` writes a staged replacement with an exact backup and a receipt for the
 owned entry. A pending journal or a modified/missing owned entry stops automatic
 updates. Keep backups and the receipt for recovery. After setup, configuration
@@ -93,6 +96,14 @@ upgrading does not terminate the tray or terminal sessions automatically.
 C:\staging\TerminalHUD\installer\manage.ps1 -Operation uninstall
 C:\staging\TerminalHUD\installer\manage.ps1 -Operation uninstall -Apply
 ```
+
+Before uninstall, review and explicitly remove the unchanged owned Terminal
+profile with `terminalhud.exe profiles remove-plan` followed by
+`terminalhud.exe profiles remove`. Removal retains an exact backup and does not
+close live sessions. An edited or missing entry is a conflict and remains
+untouched; a pending journal requires recovery before uninstall. The uninstaller
+refuses deactivation or cleanup while the profile receipt or pending transaction
+remains, so the installed CLI is available to complete that work.
 
 Uninstall removes only the exactly owned startup value and Start menu shortcut,
 and marks the installation

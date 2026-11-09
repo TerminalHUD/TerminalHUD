@@ -14,11 +14,15 @@ use windows_sys::Win32::{
 
 pub(super) struct Shell(OwnedHandle);
 impl Shell {
-    pub(super) fn wait(self) -> io::Result<()> {
+    pub(super) fn wait(self) -> io::Result<u32> {
         if unsafe { WaitForSingleObject(self.0.as_raw_handle(), INFINITE) } != WAIT_OBJECT_0 {
             return Err(io::Error::last_os_error());
         }
-        Ok(())
+        let mut code = 0;
+        if unsafe { GetExitCodeProcess(self.0.as_raw_handle(), &mut code) } == 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(code)
     }
 }
 fn expand(value: &str) -> io::Result<String> {

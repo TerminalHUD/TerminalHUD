@@ -39,6 +39,7 @@ fn run(fixture: &Fixture, expected: &[u8], updated: &[u8]) -> io::Result<()> {
         receipt: &fixture.path("receipt"),
         expected_receipt: None,
         new_receipt: b"owned",
+        remove_receipt: false,
     })
 }
 #[test]
@@ -126,9 +127,37 @@ fn unchanged_receipt_can_be_updated_with_a_new_backup() {
         receipt: &fixture.path("receipt"),
         expected_receipt: Some(b"old-owned"),
         new_receipt: b"new-owned",
+        remove_receipt: false,
     })
     .unwrap();
     assert_eq!(fs::read(fixture.path("settings.json")).unwrap(), b"updated");
     assert_eq!(fs::read(fixture.path("backup")).unwrap(), b"original");
     assert_eq!(fs::read(fixture.path("receipt")).unwrap(), b"new-owned");
+}
+#[test]
+fn oversized_receipt_is_rejected_before_stage_or_settings_write() {
+    let fixture = Fixture::new();
+    fs::write(fixture.path("settings.json"), b"original").unwrap();
+    let oversized = vec![b'x'; super::super::sources::MAX_BYTES + 1];
+    assert!(
+        apply(Plan {
+            settings: &fixture.path("settings.json"),
+            expected: b"original",
+            updated: b"updated",
+            staged: &fixture.path("staged"),
+            backup: &fixture.path("backup"),
+            journal: &fixture.path("pending"),
+            receipt: &fixture.path("receipt"),
+            expected_receipt: None,
+            new_receipt: &oversized,
+            remove_receipt: false,
+        })
+        .is_err()
+    );
+    assert_eq!(
+        fs::read(fixture.path("settings.json")).unwrap(),
+        b"original"
+    );
+    assert!(!fixture.path("staged").exists());
+    assert!(!fixture.path("receipt").exists());
 }

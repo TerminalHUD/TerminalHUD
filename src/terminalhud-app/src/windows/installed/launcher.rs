@@ -6,6 +6,7 @@ use std::{
     collections::HashSet,
     fs, io,
     os::windows::io::{AsRawHandle, OwnedHandle},
+    sync::Arc,
     thread,
     time::{Duration, Instant},
 };
@@ -15,7 +16,7 @@ use windows_sys::Win32::{Foundation::WAIT_TIMEOUT, System::Threading::WaitForSin
 
 pub(in crate::windows) struct InstalledLauncher {
     shared: Shared,
-    session: Option<(native::LauncherProcess, OwnedHandle, String)>,
+    session: Option<(native::LauncherProcess, Arc<OwnedHandle>, String, String)>,
 }
 impl InstalledLauncher {
     pub fn new(shared: Shared) -> Self {
@@ -62,8 +63,14 @@ impl InstalledLauncher {
             identity.nonce.to_string(),
             identity.profile.to_string(),
         ];
-        let launcher = native::start_with_command(&plan, &settings.terminal, &directory, &command)
-            .map_err(io::Error::other)?;
+        let launcher = native::start_with_command_and_environment(
+            &plan,
+            &settings.terminal,
+            &directory,
+            &command,
+            settings.reload_environment,
+        )
+        .map_err(io::Error::other)?;
         let deadline = Instant::now() + Duration::from_secs(8);
         let (proof, bridge) = loop {
             match handshake::read(&directory, &identity) {
@@ -100,7 +107,13 @@ impl InstalledLauncher {
         // and retains the actual owner process, which may host other windows.
         let receipt = unsafe { LaunchedWindow::from_verified_launch(hwnd as _, owner) }
             .map_err(io::Error::other)?;
-        self.session = Some((launcher, bridge, identity.nonce.bare().replace('-', "")));
+        let key = format!("{} {} {}", identity.nonce, identity.profile, proof.session);
+        self.session = Some((
+            launcher,
+            Arc::new(bridge),
+            identity.nonce.bare().replace('-', ""),
+            key,
+        ));
         Ok(receipt)
     }
 }
@@ -109,11 +122,15 @@ impl Launcher for InstalledLauncher {
         self.acquire(intent).map_err(Error::Launch)
     }
     fn enroll(&mut self, claim: RecoveryClaim) -> Result<bool, Error> {
-        let (_, bridge, instance) = self
+        let (_, bridge, instance, key) = self
             .session
             .as_ref()
             .ok_or(Error::Unsupported("missing recovery bridge"))?;
-        super::super::recovery::enroll(instance, bridge, claim).map_err(Error::Launch)?;
+        let pipe = super::super::recovery::enroll_session(instance, bridge, claim)
+            .map_err(Error::Launch)?;
+        let session = super::session::Session::new(pipe, bridge.clone(), key.clone())
+            .map_err(Error::Launch)?;
+        self.shared.register(session);
         Ok(true)
     }
 }

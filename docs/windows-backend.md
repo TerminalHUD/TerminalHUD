@@ -163,3 +163,12 @@ crash guarantee. Loss of the bridge itself, an unresponsive target, and a
 simultaneous failure of both processes remain limitations. The installed
 production bridge has not yet been wired to this contract; this development
 integration alone does not complete the MVP recovery requirement.
+
+The installed bridge also retains its authenticated enrollment pipe after the
+selected child exits. It waits for the GUI's serialized restore and a watcher
+check that the claim is absent and critical input styles match the snapshot (or
+the target is definitely gone) before returning the child's exit status. If the
+GUI dies first, the watcher performs recovery; a failed or uncertain restore
+keeps the bridge rather than declaring release. Any surviving window is then
+ordinary and unmanaged; the next shortcut can create a new HUD. This does not
+remove the asynchronous visibility/topmost limitation above.
