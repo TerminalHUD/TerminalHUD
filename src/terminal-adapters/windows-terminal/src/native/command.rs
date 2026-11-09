@@ -35,14 +35,19 @@ pub(super) fn arguments(
     plan: &crate::LaunchPlan,
     executable: &std::path::Path,
     command: &[String],
+    reload_environment: Option<bool>,
 ) -> Result<Vec<u16>, NativeError> {
     if command.iter().any(|argument| argument.contains(';')) {
         return Err(NativeError::Invalid(
             "Terminal command separators are forbidden",
         ));
     }
+    let terminal_arguments = reload_environment.map_or_else(
+        || plan.arguments(),
+        |reload| plan.arguments_with_environment(reload),
+    );
     let arguments = std::iter::once(executable.to_string_lossy().into_owned())
-        .chain(plan.arguments())
+        .chain(terminal_arguments)
         .chain(command.iter().cloned())
         .map(|argument| quote(&argument))
         .collect::<Vec<_>>()
@@ -52,4 +57,35 @@ pub(super) fn arguments(
         return Err(NativeError::Invalid("command line too long"));
     }
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn environment_flag_reaches_native_command_before_bridge() {
+        let plan = crate::LaunchPlan {
+            identity: crate::LaunchIdentity {
+                nonce: crate::Guid::parse("{01234567-89ab-4cde-8fab-012345678901}").unwrap(),
+                profile: crate::Guid::parse("{01234567-89ab-4cde-8fab-012345678902}").unwrap(),
+            },
+            intent: hudswitch_core::VisibleState::Active,
+            primary_origin: (0, 0),
+        };
+        let executable = std::path::Path::new(r"C:\fixture\WindowsTerminal.exe");
+        for (reload, expected) in [
+            (true, "--reloadEnvironment"),
+            (false, "--inheritEnvironment"),
+        ] {
+            let encoded = arguments(
+                &plan,
+                executable,
+                &["fixture-bridge.exe".into()],
+                Some(reload),
+            )
+            .unwrap();
+            let command = String::from_utf16(&encoded[..encoded.len() - 1]).unwrap();
+            assert!(command.ends_with(&format!("\"{expected}\" \"fixture-bridge.exe\"")));
+        }
+    }
 }

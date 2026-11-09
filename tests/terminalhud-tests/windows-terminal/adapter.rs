@@ -28,3 +28,10 @@ fn guid(suffix: u8) -> Guid {
     ))
     .unwrap()
 }
+
+#[path = "cases/installed_native.rs"]
+mod installed_native;
+#[path = "cases/installed_profiles.rs"]
+mod installed_profiles;
+#[path = "cases/owned_profiles.rs"]
+mod owned_profiles;

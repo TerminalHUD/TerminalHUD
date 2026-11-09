@@ -25,7 +25,9 @@ pub fn start(
     executable: &Path,
     working_directory: &Path,
 ) -> Result<LauncherProcess, NativeError> {
-    super::support::run(plan, || create(plan, executable, working_directory, &[]))
+    super::support::run(plan, || {
+        create(plan, executable, working_directory, &[], None)
+    })
 }
 
 /// Supply an explicit replacement command for a controlled launch. This does
@@ -38,11 +40,45 @@ pub fn start_with_command(
     working_directory: &Path,
     command: &[String],
 ) -> Result<LauncherProcess, NativeError> {
+    start_replacement(plan, executable, working_directory, command, None)
+}
+
+/// Preserve the selected profile's reload/inherit policy despite the explicit
+/// replacement command. The same launch and fallback preconditions apply.
+pub fn start_with_command_and_environment(
+    plan: &LaunchPlan,
+    executable: &Path,
+    working_directory: &Path,
+    command: &[String],
+    reload_environment: bool,
+) -> Result<LauncherProcess, NativeError> {
+    start_replacement(
+        plan,
+        executable,
+        working_directory,
+        command,
+        Some(reload_environment),
+    )
+}
+
+fn start_replacement(
+    plan: &LaunchPlan,
+    executable: &Path,
+    working_directory: &Path,
+    command: &[String],
+    reload_environment: Option<bool>,
+) -> Result<LauncherProcess, NativeError> {
     super::support::run(plan, || {
         if command.first().is_none_or(|argument| argument.is_empty()) {
             return Err(NativeError::Invalid("explicit launch command is required"));
         }
-        create(plan, executable, working_directory, command)
+        create(
+            plan,
+            executable,
+            working_directory,
+            command,
+            reload_environment,
+        )
     })
 }
 
@@ -51,6 +87,7 @@ fn create(
     executable: &Path,
     working_directory: &Path,
     command: &[String],
+    reload_environment: Option<bool>,
 ) -> Result<LauncherProcess, NativeError> {
     if !executable.is_absolute() || !executable.is_file() {
         return Err(NativeError::Invalid(
@@ -59,7 +96,7 @@ fn create(
     }
     let application = wide(executable.as_os_str())?;
     let cwd = wide(working_directory.as_os_str())?;
-    let mut command = arguments(plan, executable, command)?;
+    let mut command = arguments(plan, executable, command, reload_environment)?;
     let startup = STARTUPINFOW {
         cb: std::mem::size_of::<STARTUPINFOW>() as u32,
         dwFlags: STARTF_USESHOWWINDOW,

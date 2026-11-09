@@ -1,9 +1,18 @@
-mod parse;
+mod wsl;
+pub use wsl::{WslLaunch, plan_wsl_launch};
+mod editor;
+pub use editor::{OwnedProfileEntry, ProfilePatch, plan_profile_patch, remove_owned_profile};
+mod inheritance;
+pub(crate) mod parse;
+mod prepare;
 mod preview;
+mod sources;
 use crate::Guid;
+pub use prepare::PreparedProfile;
 pub use preview::FragmentPreview;
 use serde_json::{Map, Value};
-/// Effective explicit settings. Dynamic-source defaults are not fabricated.
+pub use sources::{GeneratedProfile, ProfileFragment};
+/// Effective supplied settings; missing provider data is never invented.
 #[derive(Clone, Debug)]
 pub struct Profile {
     pub guid: Guid,
@@ -28,10 +37,11 @@ impl Profile {
             .unwrap_or(false)
     }
 }
-
 pub struct Catalog {
     pub default_profile: Option<Guid>,
     pub profiles: Vec<Profile>,
-    /// Entries without explicit identity are left unresolved, not invented.
+    /// Entries without supplied identity are left unresolved, not invented.
     pub unresolved_entries: usize,
+    defaults: Map<String, Value>,
+    default_layers: [Map<String, Value>; 2],
 }

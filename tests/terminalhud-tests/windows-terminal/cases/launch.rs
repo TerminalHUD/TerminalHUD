@@ -73,3 +73,38 @@ fn normal_passive_entrypoints_refuse_before_path_checks_or_spawn() {
         Err(NativeError::Unsupported(_))
     ));
 }
+
+#[test]
+fn explicit_environment_policy_precedes_bridge_without_changing_legacy_arguments() {
+    let plan = LaunchPlan {
+        identity: LaunchIdentity {
+            nonce: guid(5),
+            profile: guid(4),
+        },
+        intent: VisibleState::Active,
+        primary_origin: (0, 0),
+    };
+    let original = plan.arguments();
+    assert!(
+        !original
+            .iter()
+            .any(|argument| argument.ends_with("Environment"))
+    );
+    for (reload, expected, other) in [
+        (true, "--reloadEnvironment", "--inheritEnvironment"),
+        (false, "--inheritEnvironment", "--reloadEnvironment"),
+    ] {
+        let mut arguments = plan.arguments_with_environment(reload);
+        arguments.extend(["fixture-bridge.exe".into(), "session-token".into()]);
+        assert_eq!(&arguments[..original.len()], original.as_slice());
+        assert_eq!(
+            &arguments[original.len()..],
+            [expected, "fixture-bridge.exe", "session-token"]
+        );
+        assert!(
+            !arguments
+                .iter()
+                .any(|argument| argument == other || argument.starts_with('!'))
+        );
+    }
+}
