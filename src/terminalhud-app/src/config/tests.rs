@@ -4,14 +4,12 @@ use terminalhud_core::config::{Candidate, Configuration, ProfileId, ProfileSelec
 #[test]
 fn documentation_defaults_and_roundtrip_agree() {
     let documentation = include_str!("../../../../docs/configuration.md");
-    let example = documentation
-        .split("```json\n")
-        .nth(1)
-        .unwrap()
-        .split("```")
-        .next()
-        .unwrap();
-    assert_eq!(decode(example).unwrap(), Configuration::default());
+    let lf = documentation.replace("\r\n", "\n");
+    let crlf = lf.replace('\n', "\r\n");
+    for document in [&lf, &crlf] {
+        let example = documentation_example(document);
+        assert_eq!(decode(&example).unwrap(), Configuration::default());
+    }
     assert_eq!(
         decode(r#"{"version":1}"#).unwrap(),
         Configuration::default()
@@ -85,4 +83,18 @@ fn failed_json_candidates_preserve_current_configuration() {
     }
     replace_from_json(&mut current, r#"{"version":1}"#).unwrap();
     assert_eq!(current, Configuration::default());
+}
+
+fn documentation_example(documentation: &str) -> String {
+    let mut lines = documentation.lines();
+    assert!(lines.any(|line| line == "```json"), "missing JSON fence");
+    let mut example = String::new();
+    for line in lines {
+        if line == "```" {
+            return example;
+        }
+        example.push_str(line);
+        example.push('\n');
+    }
+    panic!("missing closing JSON fence");
 }
