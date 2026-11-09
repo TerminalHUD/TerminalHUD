@@ -12,3 +12,21 @@ workspace = true
 [dependencies]
 hudswitch-core.workspace = true
 terminalhud-core.workspace = true
+
+serde_json = "1.0"
+jsonc-parser = { version = "0.34.0", features = ["serde"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Com", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging"] }
+
+[target.'cfg(windows)'.dev-dependencies]
+hudswitch-windows.workspace = true
+windows-sys = { version = "0.61.2", features = ["Win32_Graphics_Gdi", "Win32_System_LibraryLoader", "Win32_UI_Input_KeyboardAndMouse"] }
+
+[[test]]
+name = "windows_terminal_adapter"
+path = "../../../tests/terminalhud-tests/windows-terminal/adapter.rs"
+
+[[example]]
+name = "terminal-proof"
+path = "../../../tests/terminalhud-tests/windows-terminal/proof/main.rs"

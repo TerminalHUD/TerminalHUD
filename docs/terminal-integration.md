@@ -106,3 +106,18 @@ scan alone is insufficient when the user has other Terminal windows.
 If the target closes, the adapter reports it as absent. TerminalHUD stays in the
 notification area and relaunches on the next relevant shortcut.
 
+## Adapter implementation boundary
+
+The current [adapter primitives and validation contract](windows-terminal-adapter.md)
+separate safe read-only previews from native launch proof. A generated fragment
+file does not establish that a running Terminal loaded its profile. An unknown
+profile GUID may silently fall back to ordinary defaults, including inherited
+launch behavior; native launch must remain blocked until that ambiguity is
+resolved without modifying the user's main settings.
+
+The [startup findings](windows-terminal-feasibility.md) explain the accepted
+[Active-creation policy](decisions/0009-active-hud-creation.md). Both tested
+no-activation startup modes activated their dedicated targets; their internal
+cause is unproven. Normal adapter Passive creation returns `Unsupported` before
+spawning. The [Active acceptance proof](windows-terminal-proof.md) separately
+checks real-Terminal transitions, input, rendering and session survival.
