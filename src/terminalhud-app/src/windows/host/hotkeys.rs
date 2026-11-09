@@ -41,6 +41,9 @@ impl Registrations {
     pub(super) fn new() -> Self {
         Self(HotkeyTransaction::new(Native))
     }
+    pub(super) fn error_code(&self) -> u32 {
+        self.0.error_code
+    }
     pub(super) fn prepare(&mut self, config: &Configuration) -> Result<Prepared<Hotkeys>, String> {
         self.0.prepare(config)
     }

@@ -106,7 +106,13 @@ impl HostContext {
         let prepared_launch = launch.prepare(&candidate)?;
         let mut hotkeys = self.hotkeys.borrow_mut();
         let hotkeys = hotkeys.as_mut().ok_or("hotkey service unavailable")?;
-        let prepared_keys = hotkeys.prepare(&candidate)?;
+        let prepared_keys = match hotkeys.prepare(&candidate) {
+            Ok(prepared) => prepared,
+            Err(error) => {
+                self.hotkey_error.set(hotkeys.error_code().max(1));
+                return Err(error);
+            }
+        };
         let effect = match prepared_launch.commit() {
             Ok(effect) => effect,
             Err(error) => {
@@ -117,10 +123,12 @@ impl HostContext {
             }
         };
         if let Err(error) = hotkeys.commit(prepared_keys, &candidate) {
+            self.hotkey_error.set(u32::MAX);
             return Err(format!(
                 "{error}; launch preferences have changed; inspect runtime state"
             ));
         }
+        self.hotkey_error.set(0);
         drop(previous);
         *self.configuration.borrow_mut() = Some(candidate);
         Ok(effect)

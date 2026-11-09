@@ -102,3 +102,26 @@ fn failed_cleanup_is_reported_and_its_id_is_not_reused() {
     assert!(!prepared.0.iter().any(|entry| entry.id == stranded));
     assert!(keys.cancel(prepared).is_empty());
 }
+
+#[test]
+fn failed_old_release_reports_partial_commit_and_retains_new_actions() {
+    let (state, mut keys, _) = setup();
+    let next = candidate("Ctrl+A", "Ctrl+B");
+    let prepared = keys.prepare(&next).unwrap();
+    state.borrow_mut().fail_cleanup = true;
+    assert!(
+        keys.commit(prepared, &next)
+            .unwrap_err()
+            .contains("old registrations could not be released")
+    );
+    let state = state.borrow();
+    assert_eq!(state.active.len(), 4);
+    assert_eq!(
+        state.active.get(&keys.actions()[0].0),
+        Some(next.toggle_interaction())
+    );
+    assert_eq!(
+        state.active.get(&keys.actions()[1].0),
+        Some(next.toggle_visibility())
+    );
+}
