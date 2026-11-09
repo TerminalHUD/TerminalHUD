@@ -172,17 +172,60 @@ suites additionally exercise fail-closed runtime settings, thread-message hook
 removal semantics, delayed real replies/ACK/disconnect ambiguity and prototype
 scope isolation. They do not launch the real development HUD.
 
-Desktop acceptance still requires the exact reviewed app/runner: native
-presentation/focus, repeated IPC and tray transitions, same-session Hidden memory,
-close/relaunch isolation and restored original state with an interactive shell
-after Quit. Preserve unrelated settings/windows as read-only witnesses. Any test
-sink must be ordinary non-topmost, with explicit HUD-above-sink checks. Do not
-inject global keys, alter bindings/settings or obtain foreground through input.
-If activation needs genuine user action, stop with the concrete scoped step.
-The [accepted adapter evidence](windows-terminal-feasibility.md) establishes its
-portable fixture behavior; it does not establish this app composition's desktop
-acceptance. Record new actual outcomes and limitations before calling this slice
-demonstrated.
+### Observed native behavior
+
+Windows 11 observations with the reviewed public application binaries and the
+isolated Terminal 1.24.12741.0 runtime confirmed fresh startup Active: the window
+was visible, topmost, interactive and foreground. A genuine tray **Toggle
+interaction** action also produced native-confirmed Active, with the same target
+session and an incremented menu counter. Returning to another application made
+it Passive. Opening Windows Start also made it Passive, as required by the
+unexpected-focus-loss policy; closing Start does not automatically reactivate it.
+
+Real IPC confirmed same-session Passive → Hidden (remembering Passive) → Passive,
+with native visibility and the existing foreground preserved. Closing the exact
+disposable target left the same tray owner alive and Absent. An absent Passive
+command and subsequent read-only polling created no target. A genuine tray action
+then launched a fresh process/window/nonce/session through the same controller.
+The human confirmed that relaunch became Active; native observation began after
+that action and confirmed the fresh generation in Passive after focus moved away.
+That relaunch's Active state is a human observation, not a native Active sample.
+
+Normal Quit confirmed Unmanaged, restored the replacement window's original
+styles/visibility, exited the tray owner and left the same interactive shell
+session alive. In an earlier preserved session, the human typed a command after
+Quit and confirmed its output. These are separate observations of session
+preservation and actual command-input usability. After those assertions and
+explicit disposal consent, separate guarded normal window closes removed the
+test sessions. Product Quit itself did not close them. Final read-only checks
+found the known test objects gone, the unrelated Terminal witness unchanged,
+and ordinary settings/fragment baselines unchanged.
+
+The full automated `app-slice-proof` has **not passed**. In its owned-sink setup,
+initial native Present timed out because TOPMOST never became true within the
+unchanged 500 ms backend budget, despite successful positioning API returns.
+Separate guarded observations found the target visible; this is not evidence of
+rendering loss. The cause remains unproven. Temporary failure-only diagnostics
+were isolated from the public binaries; they changed no presentation ordering,
+alpha, timing or foreground policy. The successful public startup/tray evidence
+above does not turn that failed automated proof into a pass.
+
+The selected hotkeys reported registration error 1409 on this desktop. Their
+bindings stayed unchanged, tray/IPC remained usable, and physical shortcut
+operation was not demonstrated. A human also reported a loading pointer over
+the test Terminal; its duration and cause were not measured. The retained
+synthetic fixture reported Consolas 16 pt at window DPI 192; no user font or DPI
+settings were changed. These observations establish no installed-profile,
+Preview, full-profile-cloning, login/startup, installation, shell Escape or
+release-readiness claim.
+
+Further desktop tests must preserve unrelated settings/windows as read-only
+witnesses. Any test sink must be ordinary non-topmost, with explicit
+HUD-above-sink checks. Do not inject global keys, alter bindings/settings or
+obtain foreground through input. If activation needs genuine user action,
+prepare the concrete scoped step. The
+[accepted adapter evidence](windows-terminal-feasibility.md) remains separate
+from these application-composition observations.
 
 ## Explicit desktop runner
 
