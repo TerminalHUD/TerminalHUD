@@ -6,9 +6,9 @@ The initial Windows implementation stores per-user configuration at:
 %LOCALAPPDATA%\TerminalHUD\settings.json
 ```
 
-The schema below illustrates the initial Windows configuration and may change
-when implementation begins. It records current product decisions without
-committing to property names.
+Schema version 1 is implemented by the portable app JSON codec. The complete
+example below represents the built-in defaults. This foundation does not yet
+read settings files, register shortcuts, apply preferences, or reload the runtime.
 
 ```json
 {
@@ -22,7 +22,8 @@ committing to property names.
   },
   "display": {
     "monitor": "primary",
-    "initialPresentation": "fullscreen"
+    "initialPresentation": "fullscreen",
+    "targetCount": 1
   },
   "terminal": {
     "activeBackgroundOpacity": 35,
@@ -30,11 +31,50 @@ committing to property names.
     "defaultHudProfile": "auto"
   },
   "lifecycle": {
+    "initialState": "active",
     "keepRunningWhenTerminalCloses": true,
     "leaveTerminalOpenOnExit": true
   }
 }
 ```
+
+## Schema and validation
+
+`version` is required and must be the integer `1`. All other properties and
+sections may be omitted; each missing property takes the example's default.
+`null` is not omission. Unknown properties, duplicate properties, wrong types,
+trailing data and unsupported versions are errors, including within sections.
+Syntax/type errors include JSON location/property context; semantic errors name
+the relevant property. JSON comments are unsupported.
+
+The configurable properties are the two `hotkeys` strings,
+`startup.startWithWindows` (boolean), `terminal.activeBackgroundOpacity`
+(integer 0 through 100 inclusive) and `terminal.defaultHudProfile` (string).
+All other example properties are fixed policy guards: supplying a different
+value is an error. Lifecycle preserves sessions by retaining the running
+application on terminal close and leaving the terminal open on application exit.
+Initial creation is always Active; Passive and Hidden are existing-target states.
+
+Shortcut grammar is case-sensitive: one or more distinct modifiers from `Win`,
+`Ctrl`, `Alt`, `Shift`, separated by `+`, followed by exactly one key: `Backtick`,
+`A` through `Z`, `0` through `9`, or `F1` through `F24`. Whitespace, aliases,
+modifier-only chords and repeated modifiers are rejected. Modifier order does
+not matter; serialization orders them Win, Ctrl, Alt, Shift. The two chords must
+be distinct after normalization. This supported symbolic subset makes no claim
+about native layout mapping, OS availability or registration; it does not change
+the currently registered Windows defaults.
+
+Profile selection is the reserved string `auto`, or an opaque ID of 1 through
+256 UTF-8 bytes with at least one non-whitespace character and no control
+characters. IDs are preserved exactly, without trimming or GUID interpretation.
+The core `ProfileId` constructor rejects reserved `auto`. Profile discovery,
+identity resolution and launchability checks remain adapter work.
+
+`terminalhud_core::config` owns validated portable values and defaults; it has
+no serialization, OS, native-key or filesystem types. The app's `config::decode`
+and `encode` provide JSON conversion. Core `Configuration::replace` and app
+`replace_from_json` validate a complete candidate before assignment, so failure
+preserves the current valid value. These APIs do not write or replace a file.
 
 ## Configurable values
 
@@ -43,8 +83,8 @@ committing to property names.
 - Start with Windows
 - Active background opacity
 - Default HUD profile
-- Installed shell integrations
-- Elevation/restart preference where safe
+- Installed shell integrations (future schema work)
+- Elevation/restart preference where safe (future schema work)
 
 ## Configuration commands
 

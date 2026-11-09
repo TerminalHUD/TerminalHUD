@@ -1,6 +1,7 @@
 //! Application transports and host-thread composition.
 
 pub mod cli;
+pub mod config;
 pub mod mode;
 pub mod protocol;
 pub mod prototype;
