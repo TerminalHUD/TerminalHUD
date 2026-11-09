@@ -13,6 +13,15 @@ Supported modes:
 | WSL Bash / Git Bash | Bash 5+, Readline Emacs, promptvars enabled, positive keyseq-timeout | Empty primary prompt requests Passive; arrows and Alt/Meta prefixes remain bound |
 | PSReadLine Emacs or Vi; Bash Vi; custom standalone Escape/prefix handlers | Unsupported | Warning on load; existing bindings remain unchanged |
 
+Handler preservation uses a small read-only adapter to PSReadLine's private
+2.0–2.4 dispatch layout, because its public key-handler metadata exposes display
+labels rather than identity. It accepts only the validated ConsoleKeyInfo or
+PSKeyInfo dictionary layouts, exact static built-in delegates, and the original
+installed handler object on unload. Custom labels such as `RevertLine` or
+`TerminalHUDPassive` do not grant ownership. Other versions, unavailable private
+metadata or changed layouts produce a warning and leave bindings unchanged.
+The integration writes bindings only through public PSReadLine commands.
+
 PSReadLine owns Escape during its completion/search menus; the hook runs only
 when normal line editing dispatches Escape. Bash incremental search also consumes
 Escape itself. Bash completion that leaves input in the buffer keeps Escape in

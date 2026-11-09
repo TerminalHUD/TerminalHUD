@@ -1,4 +1,5 @@
 . (Join-Path $PSScriptRoot 'Client.ps1')
+. (Join-Path $PSScriptRoot 'HandlerIdentity.ps1')
 $script:installed = $false
 $script:previous = $null
 
@@ -13,13 +14,14 @@ function Enable-TerminalHUDEscape {
     if (@($bound | Where-Object { $_.Key -like 'Escape,*' }).Count) {
         Write-Warning 'TerminalHUD: Escape prefix chords detected; bindings unchanged.'; return
     }
-    $old = @($bound | Where-Object { $_.Key -eq 'Escape' })
-    # Public PSReadLine handler metadata does not expose custom ScriptBlocks.
-    # Preserve custom behavior by declining installation when it cannot be saved.
-    if ($old.Count -gt 1 -or ($old.Count -eq 1 -and $old[0].Function -notin @('RevertLine', 'Abort'))) {
+    $identity = Get-TerminalHUDEscapeIdentity
+    if (!$identity.supported) {
+        Write-Warning 'TerminalHUD: PSReadLine handler identity unavailable; bindings unchanged.'; return
+    }
+    if ($null -ne $identity.handler -and !$identity.builtin) {
         Write-Warning 'TerminalHUD: custom Escape handler detected; Escape unchanged.'; return
     }
-    $script:previous = if ($old.Count) { $old[0].Function } else { $null }
+    $script:previous = $identity.builtin
     Set-PSReadLineKeyHandler -Chord Escape -BriefDescription TerminalHUDPassive -ScriptBlock {
         param($key, $arg)
         $line = $null; $cursor = 0
@@ -32,13 +34,14 @@ function Enable-TerminalHUDEscape {
             [Microsoft.PowerShell.PSConsoleReadLine]::Abort($key, $arg)
         }
     }
+    $script:ownedHandler = (Get-TerminalHUDEscapeIdentity).handler
     $script:installed = $true
 }
 function Disable-TerminalHUDEscape {
     if (!$script:installed) { return }
-    $current = @(Get-PSReadLineKeyHandler -Bound | Where-Object { $_.Key -eq 'Escape' })
+    $current = Get-TerminalHUDEscapeIdentity
     # Leave a handler installed by somebody else after us intact.
-    if ($current.Count -eq 1 -and $current[0].Function -eq 'TerminalHUDPassive') {
+    if ($current.supported -and [object]::ReferenceEquals($current.handler, $script:ownedHandler)) {
         if ($script:previous) { Set-PSReadLineKeyHandler -Chord Escape -Function $script:previous }
         else { Remove-PSReadLineKeyHandler -Chord Escape }
     }

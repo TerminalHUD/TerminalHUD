@@ -17,7 +17,7 @@ try {
         if ($bytes.Length -lt 2 -or $bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) { throw "Native Windows binary missing: $name" }
     }
     if (!(Test-Path -LiteralPath (Join-Path $output 'installer\manage.ps1'))) { throw 'Installer missing from staged package' }
-    foreach ($asset in @('manage.ps1', 'bash\terminalhud.bash', 'powershell\TerminalHUD.psm1', 'powershell\Request-Passive.ps1')) {
+    foreach ($asset in @('manage.ps1', 'bash\terminalhud.bash', 'powershell\TerminalHUD.psm1', 'powershell\Request-Passive.ps1', 'powershell\HandlerIdentity.ps1')) {
         if (!(Test-Path -LiteralPath (Join-Path $output "integrations\shells\$asset"))) { throw "Shell integration missing: $asset" }
     }
     if ($env:TERMINALHUD_PACKAGE_ARTIFACT) {
